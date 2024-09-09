@@ -1,5 +1,5 @@
 [package]
-name = "verifiablejs"
+name = "verifiable-js-bindings"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,7 @@ bounded-collections = { version = "0.1.8", default-features = false }
 getrandom = { version = "0.2.11", features = ["js"] }
 js-sys = "0.3.66"
 parity-scale-codec = { version = "3.6.1", default-features = false, features = ["derive","max-encoded-len"] }
-verifiable = { git = "https://github.com/paritytech/verifiable", version = "0.1.0", default-features = false }
+verifiable = { git = "https://github.com/paritytech/verifiable", branch = "george/split-public-key", default-features = false, version = "*" }
 wasm-bindgen = "0.2.89"
 
 [dev-dependencies]
