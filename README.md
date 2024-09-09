@@ -8,9 +8,13 @@ FYI in the current state of these bindings the `small-ring` feature is enabled b
 
 ## Building
 
+The output javascript library can be built using [`wasm-pack`](https://rustwasm.github.io/wasm-pack/).
+
 ```sh
 wasm-pack build --release --target web
 ```
+
+The output package will be located in `./pkg`. The package is not released on npmjs.com .
 
 ## Testing
 
