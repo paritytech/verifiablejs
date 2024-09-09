@@ -2,9 +2,10 @@ use ark_scale::ArkScale;
 use ark_serialize::CanonicalDeserialize;
 use bandersnatch_vrfs::ring::StaticVerifierKey;
 use bounded_collections::{BoundedVec, ConstU32};
-use js_sys::{JsString, Object, Uint8Array};
+use js_sys::{Boolean, JsString, Object, Uint8Array};
 use parity_scale_codec::{Decode, Encode};
-use verifiable::{ring_vrf_impl::BandersnatchVrfVerifiable, Entropy, GenerateVerifiable};
+use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
+use verifiable::{Entropy, GenerateVerifiable};
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "small-ring")]
@@ -108,8 +109,34 @@ pub fn validate(
 }
 
 #[wasm_bindgen]
-pub fn new_secret(entropy_input: Uint8Array) -> Uint8Array {
-    todo!()
+pub fn sign(entropy: Uint8Array, message: Uint8Array) -> Result<Uint8Array, JsString> {
+    let entropy_vec = entropy.to_vec();
+    let entropy = Entropy::decode(&mut &entropy_vec[..])
+        .map_err(|_| JsString::from("Entropy decoding failed"))?;
+
+    // Secret
+    let secret = BandersnatchVrfVerifiable::new_secret(entropy);
+
+    let message = &message.to_vec()[..];
+    let signature = BandersnatchVrfVerifiable::sign(&secret, &message)
+        .map_err(|_| JsString::from("Verifiable::sign failed"))?;
+
+    Ok(Uint8Array::from(&Encode::encode(&signature)[..]))
+}
+
+#[wasm_bindgen]
+pub fn verify_signature(signature: Uint8Array, message: Uint8Array, member: Uint8Array) -> Boolean {
+    let signature = signature.to_vec();
+    let signature: <BandersnatchVrfVerifiable as GenerateVerifiable>::Signature =
+        Decode::decode(&mut &signature[..]).unwrap();
+
+    let member = member.to_vec();
+    let member: <BandersnatchVrfVerifiable as GenerateVerifiable>::Member =
+        Decode::decode(&mut &member[..]).unwrap();
+
+    let message = &message.to_vec()[..];
+
+    BandersnatchVrfVerifiable::verify_signature(&signature, &message, &member).into()
 }
 
 #[wasm_bindgen]
@@ -125,26 +152,6 @@ pub fn member_from_entropy(entropy: Uint8Array) -> Uint8Array {
     let member_encoded = member.encode();
 
     Uint8Array::from(&member_encoded[..])
-}
-
-#[wasm_bindgen]
-pub fn member_from_secret(secret_input: Uint8Array) -> Uint8Array {
-    todo!()
-}
-
-#[wasm_bindgen]
-pub fn open(member_input: Uint8Array, members_input: Uint8Array) -> Object {
-    todo!()
-}
-
-#[wasm_bindgen]
-pub fn create(
-    commitment: Uint8Array,
-    secret: Uint8Array,
-    context: Uint8Array,
-    message: Uint8Array,
-) {
-    todo!()
 }
 
 #[cfg(test)]
@@ -328,5 +335,47 @@ mod tests {
             Uint8Array::from(message.as_slice()),
         );
         assert_eq!(rs_proof_alias.to_vec(), alias.to_vec());
+    }
+
+    #[wasm_bindgen_test]
+    fn js_produces_valid_signatures() {
+        let entropy = [23u8; 32];
+        let message = b"FooBar";
+        let secret = BandersnatchVrfVerifiable::new_secret(entropy);
+
+        let member = BandersnatchVrfVerifiable::member_from_secret(&secret);
+
+        // Create Rust signature
+        let rs_signature = BandersnatchVrfVerifiable::sign(&secret, message).unwrap();
+        assert!(BandersnatchVrfVerifiable::verify_signature(
+            &rs_signature,
+            message,
+            &member
+        ));
+
+        // // Create JS signature
+        let js_signature = sign(
+            Uint8Array::from(&entropy[..]),
+            Uint8Array::from(&message[..]),
+        )
+        .expect("creating signature should work");
+
+        let js_member = member_from_entropy(Uint8Array::from(&entropy[..]));
+
+        assert!(verify_signature(
+            js_signature.clone(),
+            Uint8Array::from(&message[..]),
+            js_member.clone()
+        )
+        .is_truthy());
+
+        let other_message: &[u8; 6] = b"BarFoo";
+
+        assert!(verify_signature(
+            js_signature,
+            Uint8Array::from(&other_message[..]),
+            js_member
+        )
+        .is_falsy());
     }
 }
