@@ -1,14 +1,15 @@
 # Bandersnatch Verifiable JS Bindings
 
+PA: default feature is `small-ring` as not yet ever used with big ring.
+
 ## Building
 
 ```sh
-wasm-pack build --release --target web --features small-ring
+wasm-pack build --release --target web
 ```
 
 ## Testing
 
 ```sh
-cargo test --features "small-ring"
-wasm-pack test --node --features small-ring
+wasm-pack test --node
 ```
