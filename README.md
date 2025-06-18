@@ -1,8 +1,6 @@
-# Verifiable WASM
+# Verifiable JS
 
-WebAssembly bindings for the [Parity Verifiable](https://github.com/paritytech/verifiable) crate.
-
-This package provides JavaScript/TypeScript bindings for the Verifiable crate's cryptographic proof of membership functionality.
+This package provides JavaScript/TypeScript bindings for the [Parity Verifiable](https://github.com/paritytech/verifiable) crate.
 
 ## Features
 
@@ -14,13 +12,13 @@ This package provides JavaScript/TypeScript bindings for the Verifiable crate's 
 ## Installation
 
 ```bash
-npm install @parity/verifiable-wasm
+npm install verifiable
 ```
 
 ## Usage
 
 ```typescript
-import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from '@parity/verifiable-wasm';
+import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiable';
 
 // Initialize the WASM module
 await init();

@@ -1,10 +1,10 @@
 [package]
-name = "verifiable-wasm"
+name = "verifiable"
 version = "0.1.0"
 edition = "2021"
 description = "WebAssembly bindings for the Parity Verifiable crate"
 authors = ["Parity Technologies <admin@parity.io>"]
-repository = "https://github.com/paritytech/verifiable-wasm.git"
+repository = "https://github.com/paritytech/verifiable.git"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
 [lib]
