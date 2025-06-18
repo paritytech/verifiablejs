@@ -1,0 +1,35 @@
+{
+  "name": "@parity/verifiable-wasm",
+  "version": "0.1.0",
+  "description": "WebAssembly bindings for the Parity Verifiable crate",
+  "main": "pkg/verifiable_wasm.js",
+  "types": "pkg/verifiable_wasm.d.ts",
+  "files": [
+    "pkg"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --release --target web --features small-ring",
+    "test": "wasm-pack test --node --features small-ring"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paritytech/verifiable-wasm.git"
+  },
+  "keywords": [
+    "wasm",
+    "rust",
+    "cryptography",
+    "verifiable",
+    "parity"
+  ],
+  "author": "Parity Technologies <admin@parity.io>",
+  "license": "GPL-3.0-or-later WITH Classpath-exception-2.0",
+  "bugs": {
+    "url": "https://github.com/paritytech/verifiable-wasm/issues"
+  },
+  "homepage": "https://github.com/paritytech/verifiable-wasm#readme",
+  "devDependencies": {
+    "wasm-pack": "^0.13.1"
+  },
+  "packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac"
+}

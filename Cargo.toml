@@ -1,42 +1,31 @@
 [package]
-name = "verifiable-js-bindings"
+name = "verifiable-wasm"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-ark-scale = { version = "0.0.12", default-features = false }
-ark-serialize = { version = "0.4", default-features = false, features = ["derive"] }
-bandersnatch_vrfs = { git = "https://github.com/w3f/ring-vrf.git", branch = "real-srs", default-features = false}
-bounded-collections = { version = "0.2.0", default-features = false }
-getrandom = { version = "0.2.15", features = ["js"] }
-js-sys = "0.3.70"
-parity-scale-codec = { version = "3.6.1", default-features = false, features = ["derive","max-encoded-len"] }
-verifiable = { git = "https://github.com/paritytech/verifiable", branch = "george/split-public-key", default-features = false, version = "*" }
-wasm-bindgen = "0.2.93"
-
-[dev-dependencies]
-rand_core = "0.6"
-wasm-bindgen-test = "0.3.43"
+description = "WebAssembly bindings for the Parity Verifiable crate"
+authors = ["Parity Technologies <admin@parity.io>"]
+repository = "https://github.com/paritytech/verifiable-wasm.git"
+license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+verifiable = { git = "https://github.com/paritytech/verifiable.git", branch = "main" }
+wasm-bindgen = "0.2.90"
+js-sys = "0.3.66"
+getrandom = { version = "0.2.11", features = ["js"] }
+parity-scale-codec = { version = "3.7.4", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.40"
 
 [features]
-default = [ "std", "small-ring" ]
+default = ["std"]
 std = [
-  "bounded-collections/std",
-  "parity-scale-codec/std",
-  "verifiable/std",
-  "ark-serialize/std",
-  "ark-scale/std",
-  "bandersnatch_vrfs/std",
+    "verifiable/std",
+    "parity-scale-codec/std",
+    "scale-info/std"
 ]
-small-ring = [
-  "verifiable/small-ring",
-]
-
-[profile.test]
-opt-level = 3
-
-[profile.release]
-lto = true
+small-ring = ["verifiable/small-ring"]
