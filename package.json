@@ -2,13 +2,38 @@
   "name": "verifiable",
   "version": "0.1.0",
   "description": "WebAssembly bindings for the Parity Verifiable crate",
-  "main": "pkg/verifiable_wasm.js",
-  "types": "pkg/verifiable_wasm.d.ts",
+  "main": "pkg-nodejs/verifiable.js",
+  "types": "pkg-nodejs/verifiable.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "import": "./pkg-nodejs/verifiable.js",
+        "types": "./pkg-nodejs/verifiable.d.ts"
+      },
+      "browser": {
+        "import": "./pkg-web/verifiable.js",
+        "types": "./pkg-web/verifiable.d.ts"
+      },
+      "import": "./pkg-nodejs/verifiable.js",
+      "types": "./pkg-nodejs/verifiable.d.ts"
+    },
+    "./web": {
+      "import": "./pkg-web/verifiable.js",
+      "types": "./pkg-web/verifiable.d.ts"
+    },
+    "./nodejs": {
+      "import": "./pkg-nodejs/verifiable.js",
+      "types": "./pkg-nodejs/verifiable.d.ts"
+    }
+  },
   "files": [
-    "pkg"
+    "pkg-web",
+    "pkg-nodejs"
   ],
   "scripts": {
-    "build": "wasm-pack build --release --target web --features small-ring",
+    "build": "npm run build:web && npm run build:nodejs",
+    "build:web": "wasm-pack build --release --target web --out-dir pkg-web --features small-ring",
+    "build:nodejs": "wasm-pack build --release --target nodejs --out-dir pkg-nodejs --features small-ring",
     "test": "wasm-pack test --node --features small-ring"
   },
   "repository": {
