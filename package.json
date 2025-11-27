@@ -1,6 +1,6 @@
 {
 	"name": "verifiablejs",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "WebAssembly bindings for the Parity Verifiable crate",
 	"main": "pkg-nodejs/verifiable.js",
 	"types": "pkg-nodejs/verifiable.d.ts",
@@ -26,7 +26,10 @@
 			"types": "./pkg-nodejs/verifiable.d.ts"
 		}
 	},
-	"files": ["pkg-web", "pkg-nodejs"],
+	"files": [
+		"pkg-web",
+		"pkg-nodejs"
+	],
 	"scripts": {
 		"build": "npm run build:web && npm run build:nodejs",
 		"build:web": "wasm-pack build --release --target web --out-dir pkg-web --features small-ring",
@@ -40,7 +43,13 @@
 		"type": "git",
 		"url": "git+https://github.com/paritytech/verifiable-js.git"
 	},
-	"keywords": ["wasm", "rust", "cryptography", "verifiable", "parity"],
+	"keywords": [
+		"wasm",
+		"rust",
+		"cryptography",
+		"verifiable",
+		"parity"
+	],
 	"author": "Parity Technologies <admin@parity.io>",
 	"license": "GPL-3.0-or-later WITH Classpath-exception-2.0",
 	"bugs": {
