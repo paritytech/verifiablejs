@@ -1,6 +1,6 @@
 [package]
-name = "verifiable"
-version = "0.1.0"
+name = "verifiablejs"
+version = "1.0.0"
 edition = "2021"
 description = "WebAssembly bindings for the Parity Verifiable crate"
 authors = ["Parity Technologies <admin@parity.io>"]

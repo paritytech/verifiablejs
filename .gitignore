@@ -2,6 +2,10 @@
 /target/
 /pkg/
 
+# Generated wasm-pack outputs (excluded from git but included in npm via .npmignore)
+/pkg-web/
+/pkg-nodejs/
+
 # Node.js dependencies
 /node_modules/
 

@@ -968,19 +968,6 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 [[package]]
 name = "verifiable"
 version = "0.1.0"
-dependencies = [
- "getrandom",
- "js-sys",
- "parity-scale-codec",
- "scale-info",
- "verifiable 0.1.0 (git+https://github.com/paritytech/verifiable.git?branch=main)",
- "wasm-bindgen",
- "wasm-bindgen-test",
-]
-
-[[package]]
-name = "verifiable"
-version = "0.1.0"
 source = "git+https://github.com/paritytech/verifiable.git?branch=main#85998f1052971cf611ddd48a232e726ebe89f308"
 dependencies = [
  "ark-scale",
@@ -991,6 +978,19 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "schnorrkel",
+]
+
+[[package]]
+name = "verifiablejs"
+version = "1.0.0"
+dependencies = [
+ "getrandom",
+ "js-sys",
+ "parity-scale-codec",
+ "scale-info",
+ "verifiable",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
 ]
 
 [[package]]

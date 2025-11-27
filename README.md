@@ -18,7 +18,7 @@ npm install verifiablejs
 ## Usage
 
 ```typescript
-import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiable';
+import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs';
 
 // Initialize the WASM module
 await init();
@@ -59,6 +59,14 @@ npm test
 This will run both Rust and WASM tests:
 - `cargo test --features "small-ring"`
 - `wasm-pack test --node --features small-ring`
+
+## Releasing
+
+This project uses [Changesets](https://github.com/changesets/changesets) for version management.
+
+1. **Create a changeset**: `pnpm changeset` (select bump type: patch/minor/major)
+2. **Version bump**: `pnpm version` (consumes changesets, updates package.json and CHANGELOG.md)
+3. **Publish**: `pnpm release` (builds and publishes to npm)
 
 ## License
 

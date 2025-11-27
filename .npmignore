@@ -1,0 +1,20 @@
+# npm should include the pkg directories even though they have .gitignore files
+!pkg-web
+!pkg-web/**
+!pkg-nodejs
+!pkg-nodejs/**
+
+# Exclude these from npm package
+/target/
+/src/
+/node_modules/
+.git
+.vscode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Cargo.toml
+Cargo.lock
+.rustfmt.toml
+fix-pkg-files.js

@@ -1,29 +1,29 @@
 {
 	"name": "verifiablejs",
 	"version": "1.0.1",
-	"description": "WebAssembly bindings for the Parity Verifiable crate",
-	"main": "pkg-nodejs/verifiable.js",
-	"types": "pkg-nodejs/verifiable.d.ts",
+	"description": "WebAssembly bindings for the Parity `verifiable` crate",
+	"main": "pkg-nodejs/verifiablejs.js",
+	"types": "pkg-nodejs/verifiablejs.d.ts",
 	"exports": {
 		".": {
 			"node": {
-				"import": "./pkg-nodejs/verifiable.js",
-				"types": "./pkg-nodejs/verifiable.d.ts"
+				"import": "./pkg-nodejs/verifiablejs.js",
+				"types": "./pkg-nodejs/verifiablejs.d.ts"
 			},
 			"browser": {
-				"import": "./pkg-web/verifiable.js",
-				"types": "./pkg-web/verifiable.d.ts"
+				"import": "./pkg-web/verifiablejs.js",
+				"types": "./pkg-web/verifiablejs.d.ts"
 			},
-			"import": "./pkg-nodejs/verifiable.js",
-			"types": "./pkg-nodejs/verifiable.d.ts"
+			"import": "./pkg-nodejs/verifiablejs.js",
+			"types": "./pkg-nodejs/verifiablejs.d.ts"
 		},
 		"./web": {
-			"import": "./pkg-web/verifiable.js",
-			"types": "./pkg-web/verifiable.d.ts"
+			"import": "./pkg-web/verifiablejs.js",
+			"types": "./pkg-web/verifiablejs.d.ts"
 		},
 		"./nodejs": {
-			"import": "./pkg-nodejs/verifiable.js",
-			"types": "./pkg-nodejs/verifiable.d.ts"
+			"import": "./pkg-nodejs/verifiablejs.js",
+			"types": "./pkg-nodejs/verifiablejs.d.ts"
 		}
 	},
 	"files": [
@@ -32,8 +32,8 @@
 	],
 	"scripts": {
 		"build": "npm run build:web && npm run build:nodejs",
-		"build:web": "wasm-pack build --release --target web --out-dir pkg-web --features small-ring",
-		"build:nodejs": "wasm-pack build --release --target nodejs --out-dir pkg-nodejs --features small-ring",
+		"build:web": "wasm-pack build --release --target web --no-pack --out-dir pkg-web --features small-ring",
+		"build:nodejs": "wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs --features small-ring",
 		"test": "wasm-pack test --node --features small-ring",
 		"changeset": "changeset",
 		"version": "changeset version",
