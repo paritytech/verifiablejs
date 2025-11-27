@@ -1,5 +1,0 @@
----
-"verifiable": major
----
-
-initial release

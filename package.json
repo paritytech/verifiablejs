@@ -1,6 +1,6 @@
 {
   "name": "verifiable",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "WebAssembly bindings for the Parity Verifiable crate",
   "main": "pkg-nodejs/verifiable.js",
   "types": "pkg-nodejs/verifiable.d.ts",
