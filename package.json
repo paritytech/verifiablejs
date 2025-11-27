@@ -1,64 +1,55 @@
 {
-  "name": "verifiable",
-  "version": "1.0.0",
-  "description": "WebAssembly bindings for the Parity Verifiable crate",
-  "main": "pkg-nodejs/verifiable.js",
-  "types": "pkg-nodejs/verifiable.d.ts",
-  "exports": {
-    ".": {
-      "node": {
-        "import": "./pkg-nodejs/verifiable.js",
-        "types": "./pkg-nodejs/verifiable.d.ts"
-      },
-      "browser": {
-        "import": "./pkg-web/verifiable.js",
-        "types": "./pkg-web/verifiable.d.ts"
-      },
-      "import": "./pkg-nodejs/verifiable.js",
-      "types": "./pkg-nodejs/verifiable.d.ts"
-    },
-    "./web": {
-      "import": "./pkg-web/verifiable.js",
-      "types": "./pkg-web/verifiable.d.ts"
-    },
-    "./nodejs": {
-      "import": "./pkg-nodejs/verifiable.js",
-      "types": "./pkg-nodejs/verifiable.d.ts"
-    }
-  },
-  "files": [
-    "pkg-web",
-    "pkg-nodejs"
-  ],
-  "scripts": {
-    "build": "npm run build:web && npm run build:nodejs",
-    "build:web": "wasm-pack build --release --target web --out-dir pkg-web --features small-ring",
-    "build:nodejs": "wasm-pack build --release --target nodejs --out-dir pkg-nodejs --features small-ring",
-    "test": "wasm-pack test --node --features small-ring",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm build && changeset publish"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/paritytech/verifiable-js.git"
-  },
-  "keywords": [
-    "wasm",
-    "rust",
-    "cryptography",
-    "verifiable",
-    "parity"
-  ],
-  "author": "Parity Technologies <admin@parity.io>",
-  "license": "GPL-3.0-or-later WITH Classpath-exception-2.0",
-  "bugs": {
-    "url": "https://github.com/paritytech/verifiable-js/issues"
-  },
-  "homepage": "https://github.com/paritytech/verifiable-js#readme",
-  "devDependencies": {
-    "@changesets/cli": "^2.29.7",
-    "wasm-pack": "^0.13.1"
-  },
-  "packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac"
+	"name": "verifiablejs",
+	"version": "1.0.0",
+	"description": "WebAssembly bindings for the Parity Verifiable crate",
+	"main": "pkg-nodejs/verifiable.js",
+	"types": "pkg-nodejs/verifiable.d.ts",
+	"exports": {
+		".": {
+			"node": {
+				"import": "./pkg-nodejs/verifiable.js",
+				"types": "./pkg-nodejs/verifiable.d.ts"
+			},
+			"browser": {
+				"import": "./pkg-web/verifiable.js",
+				"types": "./pkg-web/verifiable.d.ts"
+			},
+			"import": "./pkg-nodejs/verifiable.js",
+			"types": "./pkg-nodejs/verifiable.d.ts"
+		},
+		"./web": {
+			"import": "./pkg-web/verifiable.js",
+			"types": "./pkg-web/verifiable.d.ts"
+		},
+		"./nodejs": {
+			"import": "./pkg-nodejs/verifiable.js",
+			"types": "./pkg-nodejs/verifiable.d.ts"
+		}
+	},
+	"files": ["pkg-web", "pkg-nodejs"],
+	"scripts": {
+		"build": "npm run build:web && npm run build:nodejs",
+		"build:web": "wasm-pack build --release --target web --out-dir pkg-web --features small-ring",
+		"build:nodejs": "wasm-pack build --release --target nodejs --out-dir pkg-nodejs --features small-ring",
+		"test": "wasm-pack test --node --features small-ring",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build && changeset publish"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paritytech/verifiable-js.git"
+	},
+	"keywords": ["wasm", "rust", "cryptography", "verifiable", "parity"],
+	"author": "Parity Technologies <admin@parity.io>",
+	"license": "GPL-3.0-or-later WITH Classpath-exception-2.0",
+	"bugs": {
+		"url": "https://github.com/paritytech/verifiable-js/issues"
+	},
+	"homepage": "https://github.com/paritytech/verifiable-js#readme",
+	"devDependencies": {
+		"@changesets/cli": "^2.29.7",
+		"wasm-pack": "^0.13.1"
+	},
+	"packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac"
 }

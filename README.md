@@ -12,7 +12,7 @@ This package provides JavaScript/TypeScript bindings for the [Parity Verifiable]
 ## Installation
 
 ```bash
-npm install verifiable
+npm install verifiablejs
 ```
 
 ## Usage
