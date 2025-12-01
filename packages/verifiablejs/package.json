@@ -1,0 +1,49 @@
+{
+	"name": "verifiablejs",
+	"version": "1.0.2",
+	"description": "WebAssembly bindings for the Parity `verifiable` crate",
+	"main": "pkg-nodejs/verifiablejs.js",
+	"types": "pkg-nodejs/verifiablejs.d.ts",
+	"exports": {
+		"./bundler": {
+			"import": "./pkg-bundler/verifiablejs.js",
+			"types": "./pkg-bundler/verifiablejs.d.ts"
+		},
+		"./nodejs": {
+			"import": "./pkg-nodejs/verifiablejs.js",
+			"types": "./pkg-nodejs/verifiablejs.d.ts"
+		}
+	},
+	"files": [
+		"pkg-bundler",
+		"pkg-nodejs"
+	],
+	"scripts": {
+		"build": "npm run build:bundler && npm run build:nodejs && npm run postbuild",
+		"build:bundler": "wasm-pack build --release --target bundler --no-pack --out-dir pkg-bundler --features small-ring",
+		"build:nodejs": "wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs --features small-ring",
+		"postbuild": "rm -f pkg-bundler/.gitignore pkg-nodejs/.gitignore",
+		"test": "wasm-pack test --node --features small-ring"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paritytech/verifiable-js.git"
+	},
+	"keywords": [
+		"wasm",
+		"rust",
+		"cryptography",
+		"verifiable",
+		"parity"
+	],
+	"author": "Parity Technologies <admin@parity.io>",
+	"license": "GPL-3.0-or-later WITH Classpath-exception-2.0",
+	"bugs": {
+		"url": "https://github.com/paritytech/verifiable-js/issues"
+	},
+	"homepage": "https://github.com/paritytech/verifiable-js#readme",
+	"devDependencies": {
+		"wasm-pack": "^0.13.1"
+	},
+	"packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac"
+}
