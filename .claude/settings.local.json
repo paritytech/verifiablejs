@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm pack:*)",
+      "Bash(pnpm build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git mv:*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm dev:bun:*)",
+      "Bash(pnpm vite build:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm --filter verifiablejs build:*)",
+      "Bash(git restore:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(tar:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm version)",
+      "Bash(pnpm changeset version:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

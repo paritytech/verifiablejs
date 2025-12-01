@@ -1,15 +1,5 @@
 import { sign, verify_signature, member_from_entropy, one_shot, validate } from 'verifiablejs/nodejs';
-import { compactAddLength, u8aConcat } from '@polkadot/util';
-
-// Type for one_shot result
-interface OneShotResult {
-  proof: Uint8Array;
-  alias: Uint8Array;
-  member: Uint8Array;
-  members: Uint8Array;
-  context: Uint8Array;
-  message: Uint8Array;
-}
+import { u8aConcat } from '@polkadot/util';
 
 // Helper function to encode members list using SCALE codec
 function encodeMembers(members: Uint8Array[]): Uint8Array {
@@ -82,7 +72,7 @@ async function runExample() {
     const proofMessage = new TextEncoder().encode("test-message");
 
     console.log('Creating ring proof...');
-    const result = one_shot(proverEntropy, encodedMembers, context, proofMessage) as OneShotResult;
+    const result = one_shot(proverEntropy, encodedMembers, context, proofMessage);
     console.log('Proof created!');
     console.log(`Proof length: ${result.proof.length} bytes`);
     console.log(`Alias length: ${result.alias.length} bytes\n`);
