@@ -17,8 +17,10 @@ npm install verifiablejs
 
 ## Usage
 
+### For bundler environments (Webpack, Vite, Rollup, etc.)
+
 ```typescript
-import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs';
+import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs/bundler';
 
 // Initialize the WASM module
 await init();
@@ -42,13 +44,26 @@ const signature = sign(entropy, message);
 const isValid = verify_signature(signature, message, member);
 ```
 
+### For Node.js or Bun
+
+```typescript
+import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs/nodejs';
+
+// Initialize the WASM module
+await init();
+
+// Use the same API as above
+```
+
 ## Building
 
 ```sh
 npm run build
 ```
 
-This will run `wasm-pack build --release --target web --features small-ring`
+This builds both bundler and Node.js targets:
+- `wasm-pack build --release --target bundler --features small-ring`
+- `wasm-pack build --release --target nodejs --features small-ring`
 
 ## Testing
 

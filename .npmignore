@@ -1,6 +1,6 @@
 # npm should include the pkg directories even though they have .gitignore files
-!pkg-web
-!pkg-web/**
+!pkg-bundler
+!pkg-bundler/**
 !pkg-nodejs
 !pkg-nodejs/**
 

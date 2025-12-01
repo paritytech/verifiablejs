@@ -5,21 +5,9 @@
 	"main": "pkg-nodejs/verifiablejs.js",
 	"types": "pkg-nodejs/verifiablejs.d.ts",
 	"exports": {
-		".": {
-			"node": {
-				"import": "./pkg-nodejs/verifiablejs.js",
-				"types": "./pkg-nodejs/verifiablejs.d.ts"
-			},
-			"browser": {
-				"import": "./pkg-web/verifiablejs.js",
-				"types": "./pkg-web/verifiablejs.d.ts"
-			},
-			"import": "./pkg-nodejs/verifiablejs.js",
-			"types": "./pkg-nodejs/verifiablejs.d.ts"
-		},
-		"./web": {
-			"import": "./pkg-web/verifiablejs.js",
-			"types": "./pkg-web/verifiablejs.d.ts"
+		"./bundler": {
+			"import": "./pkg-bundler/verifiablejs.js",
+			"types": "./pkg-bundler/verifiablejs.d.ts"
 		},
 		"./nodejs": {
 			"import": "./pkg-nodejs/verifiablejs.js",
@@ -27,13 +15,14 @@
 		}
 	},
 	"files": [
-		"pkg-web",
+		"pkg-bundler",
 		"pkg-nodejs"
 	],
 	"scripts": {
-		"build": "npm run build:web && npm run build:nodejs",
-		"build:web": "wasm-pack build --release --target web --no-pack --out-dir pkg-web --features small-ring",
+		"build": "npm run build:bundler && npm run build:nodejs && npm run postbuild",
+		"build:bundler": "wasm-pack build --release --target bundler --no-pack --out-dir pkg-bundler --features small-ring",
 		"build:nodejs": "wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs --features small-ring",
+		"postbuild": "rm -f pkg-bundler/.gitignore pkg-nodejs/.gitignore",
 		"test": "wasm-pack test --node --features small-ring",
 		"changeset": "changeset",
 		"version": "changeset version",
