@@ -8,6 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@polkadot/util": "^13.5.9",
     "verifiablejs": "workspace:*"
   },
   "devDependencies": {
