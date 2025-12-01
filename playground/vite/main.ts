@@ -1,7 +1,7 @@
 import { sign, verify_signature, member_from_entropy } from 'verifiablejs/bundler';
 
-const button = document.getElementById('runExample');
-const output = document.getElementById('output');
+const button = document.getElementById('runExample')!;
+const output = document.getElementById('output')!;
 
 button.addEventListener('click', async () => {
   try {
@@ -34,6 +34,6 @@ button.addEventListener('click', async () => {
 
     output.textContent += 'All operations completed successfully!';
   } catch (error) {
-    output.textContent += `\nError: ${error.message}\n${error.stack}`;
+    output.textContent += `\nError: ${error instanceof Error ? error.message : String(error)}\n${error instanceof Error ? error.stack : ''}`;
   }
 });

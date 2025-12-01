@@ -32,10 +32,8 @@ async function runExample() {
     console.log('All operations completed successfully!');
   } catch (error) {
     console.error('Error:', error);
-    if (error && error.message) {
+    if (error instanceof Error) {
       console.error('Message:', error.message);
-    }
-    if (error && error.stack) {
       console.error('Stack:', error.stack);
     }
   }
