@@ -13,7 +13,21 @@ use verifiable::{
 };
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+export interface OneShotResult {
+    proof: Uint8Array;
+    alias: Uint8Array;
+    member: Uint8Array;
+    members: Uint8Array;
+    context: Uint8Array;
+    message: Uint8Array;
+}
+
+export function one_shot(entropy: Uint8Array, members: Uint8Array, context: Uint8Array, message: Uint8Array): OneShotResult;
+"#;
+
+#[wasm_bindgen(skip_typescript)]
 pub fn one_shot(
 	entropy: Uint8Array,
 	members: Uint8Array,
