@@ -1,14 +1,28 @@
-# Verifiable JS Monorepo
+# Verifiable JS
 
-Monorepo for [verifiablejs](./packages/verifiablejs) package and playgrounds.
+JavaScript/TypeScript bindings for the [Parity Verifiable](https://github.com/paritytech/verifiable) crate.
 
-## Structure
+## Installation
 
-- `packages/verifiablejs` - WebAssembly bindings for the Parity Verifiable crate
-- `playground/vite` - Vite/bundler playground example
-- `playground/bun` - Node.js/Bun playground example
+```bash
+npm install verifiablejs
+```
 
-## Quick Start
+The package is published on npm as [`verifiablejs`](https://www.npmjs.com/package/verifiablejs).
+
+For full API documentation, usage examples, and features, see the **[package README](./packages/verifiablejs/README.md)**.
+
+---
+
+## Monorepo Structure
+
+This is a monorepo containing:
+
+- [`packages/verifiablejs`](./packages/verifiablejs) - The main package (published to npm)
+- [`playground/vite`](./playground/vite) - Vite/bundler playground example
+- [`playground/bun`](./playground/bun) - Node.js/Bun playground example
+
+## Development
 
 ```sh
 # Install dependencies
@@ -23,10 +37,6 @@ pnpm dev:vite
 # Run Bun/Node playground
 pnpm dev:bun
 ```
-
-## Package Documentation
-
-See [packages/verifiablejs/README.md](./packages/verifiablejs/README.md) for full API documentation.
 
 ## Releasing
 
