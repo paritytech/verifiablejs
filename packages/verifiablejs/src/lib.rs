@@ -174,6 +174,61 @@ pub fn member_from_entropy(entropy: Uint8Array) -> Uint8Array {
 	Uint8Array::from(&member_encoded[..])
 }
 
+/// Compute the ring root (MembersOf<T>) from a SCALE-encoded Vec of members.
+/// This returns the 384-byte commitment needed for People::Root storage.
+#[wasm_bindgen]
+pub fn members_root(members: Uint8Array) -> Result<Uint8Array, JsString> {
+	let members = members.to_vec();
+	let members =
+		Vec::<<BandersnatchVrfVerifiable as GenerateVerifiable>::Member>::decode(&mut &members[..])
+			.map_err(|_| JsString::from("Decoding Members failed"))?;
+
+	let builder_params = ring_verifier_builder_params();
+	let get_many = |range| {
+		(&builder_params)
+			.lookup(range)
+			.map(|v| v.into_iter().map(|i| StaticChunk(i)).collect::<Vec<_>>())
+			.ok_or(())
+	};
+
+	let mut inter = BandersnatchVrfVerifiable::start_members();
+
+	BandersnatchVrfVerifiable::push_members(&mut inter, members.into_iter(), get_many)
+		.map_err(|_| JsString::from("push_members failed"))?;
+
+	let members_commitment = BandersnatchVrfVerifiable::finish_members(inter);
+
+	let commitment_encoded = members_commitment.encode();
+	Ok(Uint8Array::from(&commitment_encoded[..]))
+}
+
+/// Compute the intermediate (MembersSet / IntermediateOf<T>) from a SCALE-encoded Vec of members.
+/// This returns the 432-byte intermediate needed for People::Root storage.
+/// The intermediate is the RingVerifierKeyBuilder state AFTER adding members but BEFORE finalization.
+#[wasm_bindgen]
+pub fn members_intermediate(members: Uint8Array) -> Result<Uint8Array, JsString> {
+	let members = members.to_vec();
+	let members =
+		Vec::<<BandersnatchVrfVerifiable as GenerateVerifiable>::Member>::decode(&mut &members[..])
+			.map_err(|_| JsString::from("Decoding Members failed"))?;
+
+	let builder_params = ring_verifier_builder_params();
+	let get_many = |range| {
+		(&builder_params)
+			.lookup(range)
+			.map(|v| v.into_iter().map(|i| StaticChunk(i)).collect::<Vec<_>>())
+			.ok_or(())
+	};
+
+	let mut inter = BandersnatchVrfVerifiable::start_members();
+
+	BandersnatchVrfVerifiable::push_members(&mut inter, members.into_iter(), get_many)
+		.map_err(|_| JsString::from("push_members failed"))?;
+
+	let intermediate_encoded = inter.encode();
+	Ok(Uint8Array::from(&intermediate_encoded[..]))
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
