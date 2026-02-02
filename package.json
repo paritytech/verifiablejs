@@ -8,8 +8,7 @@
     "dev:vite": "pnpm --filter playground-vite dev",
     "dev:bun": "pnpm --filter playground-bun dev",
     "test": "pnpm --filter verifiablejs test",
-    "changeset": "changeset",
-    "version": "changeset version",
+    "apply-changesets": "changeset version",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
