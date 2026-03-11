@@ -1,5 +1,11 @@
 # verifiablejs
 
+## 1.2.2
+
+### Patch Changes
+
+- e6890fc: Auto-create GitHub Release and trigger npm publish from CI
+
 ## 1.2.1
 
 ### Patch Changes
