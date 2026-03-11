@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
   build:
@@ -27,23 +27,16 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
 
   changesets:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@v2
-        id: app-token
-        with:
-          app-id: ${{ secrets.VERIFIABLE_JS_PR_APP_ID }}
-          private-key: ${{ secrets.VERIFIABLE_JS_PR_APP_KEY }}
-
       - uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
 
       - uses: pnpm/action-setup@v4
 
@@ -52,38 +45,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - uses: changesets/action@v1
         with:
           commit: "chore: version packages"
           title: "chore: version packages"
-          publish: npx @changesets/cli tag
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-
-  npm-publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: jetli/wasm-pack-action@v0.4.0
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install
-      - run: pnpm build
-
-      - uses: ./.github/actions/publish-package
-        with:
-          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
-          tarball-name: verifiablejs
-          package-directory: ./packages/verifiablejs
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

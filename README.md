@@ -43,5 +43,6 @@ pnpm dev:bun
 This project uses [Changesets](https://github.com/changesets/changesets) with automated CI/CD:
 
 1. Create a changeset (`pnpm changeset`) and push/merge to `main`
-2. CI automatically creates a "chore: version packages" PR
-3. Merging that PR triggers npm publish via `paritytech/npm_publish_automation`
+2. CI automatically creates a "chore: version packages" PR (bumps version, updates CHANGELOG)
+3. Merge the version PR
+4. Create a **GitHub Release** with tag `vX.Y.Z` → triggers npm publish via `paritytech/npm_publish_automation`
