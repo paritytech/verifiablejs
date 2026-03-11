@@ -14,6 +14,7 @@
 			"types": "./pkg-nodejs/verifiablejs.d.ts"
 		}
 	},
+	"sideEffects": false,
 	"files": [
 		"pkg-bundler",
 		"pkg-nodejs"
