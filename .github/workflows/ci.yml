@@ -85,3 +85,13 @@ jobs:
               generate_release_notes: true,
             });
             console.log(`Created release ${tag}`);
+
+            // Dispatch npm-release workflow (GITHUB_TOKEN can trigger workflow_dispatch)
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'npm-release.yml',
+              ref: 'main',
+              inputs: { tag: tag },
+            });
+            console.log(`Dispatched npm-release workflow for ${tag}`);

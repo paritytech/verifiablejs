@@ -3,6 +3,11 @@ name: NPM Release
 on:
   release:
     types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.2.3)'
+        required: true
 
 jobs:
   publish:
@@ -23,7 +28,12 @@ jobs:
 
       - name: Set version from release tag
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${TAG#v}"
           echo "Publishing version: $VERSION"
           npm pkg set version="$VERSION"
         working-directory: packages/verifiablejs
