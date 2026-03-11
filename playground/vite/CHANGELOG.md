@@ -1,5 +1,12 @@
 # playground-vite
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [a11e90f]
+  - verifiablejs@1.2.1
+
 ## 0.0.3
 
 ### Patch Changes
