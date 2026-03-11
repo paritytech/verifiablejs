@@ -1,5 +1,11 @@
 # verifiablejs
 
+## 1.2.1
+
+### Patch Changes
+
+- a11e90f: Add `sideEffects: false` to package.json for better tree-shaking support
+
 ## 1.2.0
 
 ### Minor Changes
