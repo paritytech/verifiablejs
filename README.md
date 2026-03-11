@@ -40,8 +40,8 @@ pnpm dev:bun
 
 ## Releasing
 
-This project uses [Changesets](https://github.com/changesets/changesets) for version management.
+This project uses [Changesets](https://github.com/changesets/changesets) with automated CI/CD:
 
-1. **Create a changeset**: `pnpm changeset`
-2. **Version bump**: `pnpm version`
-3. **Publish**: `pnpm release`
+1. Create a changeset (`pnpm changeset`) and push/merge to `main`
+2. CI automatically creates a "chore: version packages" PR
+3. Merging that PR triggers npm publish via `paritytech/npm_publish_automation`
