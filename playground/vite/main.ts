@@ -1,5 +1,8 @@
-import { sign, verify_signature, member_from_entropy, one_shot, validate } from 'verifiablejs/bundler';
+import { sign, verify_signature, member_from_entropy, one_shot, validate, alias_in_context, is_member_valid } from 'verifiablejs/bundler';
 import { u8aConcat } from '@polkadot/util';
+
+// Ring domain size: 11 = Domain11 (smallest, fastest, max ~255 members)
+const DOMAIN_SIZE = 11;
 
 // Helper function to encode members list using SCALE codec
 function encodeMembers(members: Uint8Array[]): Uint8Array {
@@ -55,7 +58,12 @@ button.addEventListener('click', async () => {
     const isInvalid = verify_signature(signature, wrongMessage, member);
     output.textContent += `Signature valid for wrong message: ${isInvalid}\n\n`;
 
-    // === Example 2: Ring Proof Creation and Validation ===
+    // === Example 2: Member Validation ===
+    output.textContent += '=== Member Validation ===\n';
+    output.textContent += `Member is valid: ${is_member_valid(member)}\n`;
+    output.textContent += `Garbage is valid: ${is_member_valid(new Uint8Array(32).fill(0xff))}\n\n`;
+
+    // === Example 3: Ring Proof Creation and Validation ===
     output.textContent += '=== Ring Proof Example ===\n';
 
     // Create a ring of 10 members
@@ -75,19 +83,27 @@ button.addEventListener('click', async () => {
     const proofMessage = new TextEncoder().encode("test-message");
 
     output.textContent += 'Creating ring proof...\n';
-    const result = one_shot(proverEntropy, encodedMembers, context, proofMessage);
+    const result = one_shot(DOMAIN_SIZE, proverEntropy, encodedMembers, context, proofMessage);
     output.textContent += `Proof created!\n`;
     output.textContent += `Proof length: ${result.proof.length} bytes\n`;
     output.textContent += `Alias length: ${result.alias.length} bytes\n\n`;
 
     output.textContent += 'Validating ring proof...\n';
-    const validatedAlias = validate(result.proof, encodedMembers, context, proofMessage);
+    const validatedAlias = validate(DOMAIN_SIZE, result.proof, encodedMembers, context, proofMessage);
     output.textContent += `Proof validated! Alias length: ${validatedAlias.length} bytes\n`;
 
     // Check if aliases match
     const aliasesMatch = result.alias.length === validatedAlias.length &&
       result.alias.every((byte: number, i: number) => byte === validatedAlias[i]);
     output.textContent += `Aliases match: ${aliasesMatch}\n\n`;
+
+    // === Example 4: Alias in Context ===
+    output.textContent += '=== Alias in Context ===\n';
+    const directAlias = alias_in_context(proverEntropy, context);
+    output.textContent += `Direct alias length: ${directAlias.length} bytes\n`;
+    const directAliasMatches = directAlias.length === result.alias.length &&
+      directAlias.every((byte: number, i: number) => byte === result.alias[i]);
+    output.textContent += `Direct alias matches proof alias: ${directAliasMatches}\n\n`;
 
     output.textContent += 'All operations completed successfully!';
   } catch (error) {

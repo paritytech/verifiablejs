@@ -21,10 +21,10 @@
 	],
 	"scripts": {
 		"build": "npm run build:bundler && npm run build:nodejs && npm run postbuild",
-		"build:bundler": "wasm-pack build --release --target bundler --no-pack --out-dir pkg-bundler --features small-ring",
-		"build:nodejs": "wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs --features small-ring",
+		"build:bundler": "wasm-pack build --release --target bundler --no-pack --out-dir pkg-bundler",
+		"build:nodejs": "wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs",
 		"postbuild": "rm -f pkg-bundler/.gitignore pkg-nodejs/.gitignore",
-		"test": "wasm-pack test --node --features small-ring"
+		"test": "wasm-pack test --node"
 	},
 	"repository": {
 		"type": "git",

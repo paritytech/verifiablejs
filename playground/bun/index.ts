@@ -1,5 +1,8 @@
-import { sign, verify_signature, member_from_entropy, one_shot, validate } from 'verifiablejs/nodejs';
+import { sign, verify_signature, member_from_entropy, one_shot, validate, alias_in_context, is_member_valid } from 'verifiablejs/nodejs';
 import { u8aConcat } from '@polkadot/util';
+
+// Ring domain size: 11 = Domain11 (smallest, fastest, max ~255 members)
+const DOMAIN_SIZE = 11;
 
 // Helper function to encode members list using SCALE codec
 function encodeMembers(members: Uint8Array[]): Uint8Array {
@@ -52,7 +55,12 @@ async function runExample() {
     const isInvalid = verify_signature(signature, wrongMessage, member);
     console.log(`Signature valid for wrong message: ${isInvalid}\n`);
 
-    // === Example 2: Ring Proof Creation and Validation ===
+    // === Example 2: Member Validation ===
+    console.log('=== Member Validation ===');
+    console.log(`Member is valid: ${is_member_valid(member)}`);
+    console.log(`Garbage is valid: ${is_member_valid(new Uint8Array(32).fill(0xff))}\n`);
+
+    // === Example 3: Ring Proof Creation and Validation ===
     console.log('=== Ring Proof Example ===');
 
     // Create a ring of 10 members
@@ -72,19 +80,27 @@ async function runExample() {
     const proofMessage = new TextEncoder().encode("test-message");
 
     console.log('Creating ring proof...');
-    const result = one_shot(proverEntropy, encodedMembers, context, proofMessage);
+    const result = one_shot(DOMAIN_SIZE, proverEntropy, encodedMembers, context, proofMessage);
     console.log('Proof created!');
     console.log(`Proof length: ${result.proof.length} bytes`);
     console.log(`Alias length: ${result.alias.length} bytes\n`);
 
     console.log('Validating ring proof...');
-    const validatedAlias = validate(result.proof, encodedMembers, context, proofMessage);
+    const validatedAlias = validate(DOMAIN_SIZE, result.proof, encodedMembers, context, proofMessage);
     console.log(`Proof validated! Alias length: ${validatedAlias.length} bytes`);
 
     // Check if aliases match
     const aliasesMatch = result.alias.length === validatedAlias.length &&
       result.alias.every((byte: number, i: number) => byte === validatedAlias[i]);
     console.log(`Aliases match: ${aliasesMatch}\n`);
+
+    // === Example 4: Alias in Context ===
+    console.log('=== Alias in Context ===');
+    const directAlias = alias_in_context(proverEntropy, context);
+    console.log(`Direct alias length: ${directAlias.length} bytes`);
+    const directAliasMatches = directAlias.length === result.alias.length &&
+      directAlias.every((byte: number, i: number) => byte === result.alias[i]);
+    console.log(`Direct alias matches proof alias: ${directAliasMatches}\n`);
 
     console.log('All operations completed successfully!');
   } catch (error) {
