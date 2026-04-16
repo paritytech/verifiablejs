@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-verifiable = { git = "https://github.com/paritytech/verifiable.git", rev = "8b40930" }
+verifiable = { git = "https://github.com/paritytech/verifiable.git", rev = "cfb9704" }
 wasm-bindgen = "0.2.90"
 js-sys = "0.3.66"
 getrandom = { version = "0.2.11", features = ["js"] }

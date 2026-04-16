@@ -21,6 +21,3 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
-
-# Internal reference docs (not public)
-ARCHITECTURE.md
