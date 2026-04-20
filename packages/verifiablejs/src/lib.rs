@@ -18,17 +18,23 @@ use wasm_bindgen::prelude::*;
 
 type Bvv = BandersnatchVrfVerifiable;
 
-fn parse_domain_size(domain_size: u32) -> Result<RingDomainSize, JsString> {
-	match domain_size {
-		11 => Ok(RingDomainSize::Domain11),
-		12 => Ok(RingDomainSize::Domain12),
-		16 => Ok(RingDomainSize::Domain16),
-		_ => Err(JsString::from("Invalid domain_size. Use 11, 12, or 16.")),
+/// Map the on-chain `RingExponent` (9 | 10 | 14) to the internal FFT
+/// `RingDomainSize` used by the `verifiable` crate.
+///
+/// - `9`  → `Domain11` (capacity 255, `2^9 − 257`)
+/// - `10` → `Domain12` (capacity 767, `2^10 − 257`)
+/// - `14` → `Domain16` (capacity 16127, `2^14 − 257`)
+fn parse_ring_exponent(ring_exponent: u32) -> Result<RingDomainSize, JsString> {
+	match ring_exponent {
+		9 => Ok(RingDomainSize::Domain11),
+		10 => Ok(RingDomainSize::Domain12),
+		14 => Ok(RingDomainSize::Domain16),
+		_ => Err(JsString::from("Invalid ring_exponent. Use 9, 10, or 14.")),
 	}
 }
 
-fn parse_capacity(domain_size: u32) -> Result<<Bvv as GenerateVerifiable>::Capacity, JsString> {
-	let ds = parse_domain_size(domain_size)?;
+fn parse_capacity(ring_exponent: u32) -> Result<<Bvv as GenerateVerifiable>::Capacity, JsString> {
+	let ds = parse_ring_exponent(ring_exponent)?;
 	Ok(RingSize::from(ds))
 }
 
@@ -41,10 +47,10 @@ fn decode_members(
 }
 
 fn build_members_commitment(
-	domain_size: u32,
+	ring_exponent: u32,
 	members: Vec<<Bvv as GenerateVerifiable>::Member>,
 ) -> Result<<Bvv as GenerateVerifiable>::Members, JsString> {
-	let ds = parse_domain_size(domain_size)?;
+	let ds = parse_ring_exponent(ring_exponent)?;
 	let capacity = RingSize::from(ds);
 
 	let builder_params = ring_verifier_builder_params::<BandersnatchSha512Ell2>(ds);
@@ -64,12 +70,19 @@ fn build_members_commitment(
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
 /**
- * Ring domain size. Determines the maximum ring capacity.
- * - 11: Domain11 (2^11, max ~255 members) - smallest, fastest
- * - 12: Domain12 (2^12, max ~767 members)
- * - 16: Domain16 (2^16, max ~16127 members) - largest
+ * On-chain `RingExponent`. Determines the maximum ring capacity.
+ *
+ * Capacity formula: `2^x − 257`.
+ * - 9:  R2e9  — capacity 255   (smallest, fastest)
+ * - 10: R2e10 — capacity 767
+ * - 14: R2e14 — capacity 16127 (largest)
+ *
+ * Matches `pallet-members` / `pallet-chunks-manager` storage on chain.
+ * Internally mapped to the `verifiable` crate's FFT `RingDomainSize`
+ * (Domain11 / Domain12 / Domain16); callers of this package never need
+ * to see the FFT domain number.
  */
-export type RingDomainSize = 11 | 12 | 16;
+export type RingExponent = 9 | 10 | 14;
 
 export interface OneShotResult {
     proof: Uint8Array;
@@ -89,19 +102,19 @@ export interface MultiContextResult {
     message: Uint8Array;
 }
 
-export function one_shot(domain_size: RingDomainSize, entropy: Uint8Array, members: Uint8Array, context: Uint8Array, message: Uint8Array): OneShotResult;
-export function create_multi_context(domain_size: RingDomainSize, entropy: Uint8Array, members: Uint8Array, contexts: Uint8Array, message: Uint8Array): MultiContextResult;
+export function one_shot(ring_exponent: RingExponent, entropy: Uint8Array, members: Uint8Array, context: Uint8Array, message: Uint8Array): OneShotResult;
+export function create_multi_context(ring_exponent: RingExponent, entropy: Uint8Array, members: Uint8Array, contexts: Uint8Array, message: Uint8Array): MultiContextResult;
 "#;
 
 #[wasm_bindgen(skip_typescript)]
 pub fn one_shot(
-	domain_size: u32,
+	ring_exponent: u32,
 	entropy: Uint8Array,
 	members: Uint8Array,
 	context: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Object, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let entropy_vec = entropy.to_vec();
 	let entropy = Entropy::decode(&mut &entropy_vec[..])
@@ -159,13 +172,13 @@ pub fn one_shot(
 
 #[wasm_bindgen(skip_typescript)]
 pub fn create_multi_context(
-	domain_size: u32,
+	ring_exponent: u32,
 	entropy: Uint8Array,
 	members: Uint8Array,
 	contexts: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Object, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let entropy_vec = entropy.to_vec();
 	let entropy = Entropy::decode(&mut &entropy_vec[..])
@@ -242,22 +255,54 @@ pub fn create_multi_context(
 	Ok(obj)
 }
 
+/// Validate a ring proof against a pre-built 768-byte SCALE-encoded
+/// `MembersCommitment` — the ring root as stored by `pallet-members` on chain.
+///
+/// Recommended entry point for chain-adjacent frontends: fetch the ring root
+/// via RPC and pass it directly, skipping the commitment-construction step
+/// that `validate()` performs.
+#[wasm_bindgen]
+pub fn validate_with_commitment(
+	ring_exponent: u32,
+	proof: Uint8Array,
+	commitment: Uint8Array,
+	context: Uint8Array,
+	message: Uint8Array,
+) -> Result<Uint8Array, JsString> {
+	let capacity = parse_capacity(ring_exponent)?;
+
+	let proof_vec = proof.to_vec();
+	let proof: <Bvv as GenerateVerifiable>::Proof = Decode::decode(&mut &proof_vec[..])
+		.map_err(|_| JsString::from("Decoding Proof failed"))?;
+
+	let commitment_vec = commitment.to_vec();
+	let members_commitment = <Bvv as GenerateVerifiable>::Members::decode(&mut &commitment_vec[..])
+		.map_err(|_| JsString::from("Decoding Commitment failed"))?;
+
+	let context = &context.to_vec()[..];
+	let message = &message.to_vec()[..];
+	let alias = Bvv::validate(capacity, &proof, &members_commitment, context, message)
+		.map_err(|_| JsString::from("Proof not able to be validated"))?;
+
+	Ok(Uint8Array::from(&Encode::encode(&alias)[..]))
+}
+
 #[wasm_bindgen]
 pub fn validate(
-	domain_size: u32,
+	ring_exponent: u32,
 	proof: Uint8Array,
 	members: Uint8Array,
 	context: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Uint8Array, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let proof = proof.to_vec();
 	let proof: <Bvv as GenerateVerifiable>::Proof =
 		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
 
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 
 	let context = &context.to_vec()[..];
 	let message = &message.to_vec()[..];
@@ -269,20 +314,20 @@ pub fn validate(
 
 #[wasm_bindgen]
 pub fn validate_multi_context(
-	domain_size: u32,
+	ring_exponent: u32,
 	proof: Uint8Array,
 	members: Uint8Array,
 	contexts: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Uint8Array, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let proof = proof.to_vec();
 	let proof: <Bvv as GenerateVerifiable>::Proof =
 		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
 
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 
 	let raw_contexts = contexts.to_vec();
 	let decoded_contexts = Vec::<Vec<u8>>::decode(&mut &raw_contexts[..])
@@ -299,21 +344,21 @@ pub fn validate_multi_context(
 
 #[wasm_bindgen]
 pub fn is_valid(
-	domain_size: u32,
+	ring_exponent: u32,
 	proof: Uint8Array,
 	members: Uint8Array,
 	context: Uint8Array,
 	alias: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Boolean, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let proof = proof.to_vec();
 	let proof: <Bvv as GenerateVerifiable>::Proof =
 		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
 
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 
 	let alias_vec = alias.to_vec();
 	let alias: Alias =
@@ -328,21 +373,21 @@ pub fn is_valid(
 
 #[wasm_bindgen]
 pub fn is_valid_multi_context(
-	domain_size: u32,
+	ring_exponent: u32,
 	proof: Uint8Array,
 	members: Uint8Array,
 	contexts: Uint8Array,
 	aliases: Uint8Array,
 	message: Uint8Array,
 ) -> Result<Boolean, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let proof = proof.to_vec();
 	let proof: <Bvv as GenerateVerifiable>::Proof =
 		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
 
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 
 	let raw_contexts = contexts.to_vec();
 	let decoded_contexts = Vec::<Vec<u8>>::decode(&mut &raw_contexts[..])
@@ -368,14 +413,14 @@ pub fn is_valid_multi_context(
 
 #[wasm_bindgen]
 pub fn batch_validate(
-	domain_size: u32,
+	ring_exponent: u32,
 	members: Uint8Array,
 	proof_items: Uint8Array,
 ) -> Result<Uint8Array, JsString> {
-	let capacity = parse_capacity(domain_size)?;
+	let capacity = parse_capacity(ring_exponent)?;
 
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 
 	// BatchProofItem doesn't implement Decode, so accept SCALE-encoded
 	// Vec<(Proof, Vec<u8>, Vec<u8>)> tuples and construct items manually.
@@ -473,9 +518,9 @@ pub fn is_member_valid(member: Uint8Array) -> Boolean {
 /// Compute the ring root (MembersCommitment) from a SCALE-encoded Vec of members.
 /// This returns the 768-byte commitment.
 #[wasm_bindgen]
-pub fn members_root(domain_size: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
+pub fn members_root(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
 	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(domain_size, decoded_members)?;
+	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
 	let commitment_encoded = members_commitment.encode();
 	Ok(Uint8Array::from(&commitment_encoded[..]))
 }
@@ -483,8 +528,8 @@ pub fn members_root(domain_size: u32, members: Uint8Array) -> Result<Uint8Array,
 /// Compute the intermediate (MembersSet) from a SCALE-encoded Vec of members.
 /// This returns the 848-byte intermediate needed for chain storage.
 #[wasm_bindgen]
-pub fn members_intermediate(domain_size: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
-	let ds = parse_domain_size(domain_size)?;
+pub fn members_intermediate(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
+	let ds = parse_ring_exponent(ring_exponent)?;
 	let capacity = RingSize::from(ds);
 
 	let decoded_members = decode_members(members)?;
@@ -510,7 +555,7 @@ mod tests {
 	use super::*;
 	use wasm_bindgen_test::*;
 
-	const TEST_DOMAIN_SIZE: u32 = 11;
+	const TEST_RING_EXPONENT: u32 = 9;
 
 	fn get_secret_and_member(
 		entropy: &[u8; 32],
@@ -531,6 +576,58 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
+	fn ring_exponent_maps_to_expected_domain() {
+		assert_eq!(parse_ring_exponent(9).unwrap(), RingDomainSize::Domain11);
+		assert_eq!(parse_ring_exponent(10).unwrap(), RingDomainSize::Domain12);
+		assert_eq!(parse_ring_exponent(14).unwrap(), RingDomainSize::Domain16);
+		// Old domain_size values must not be accepted.
+		assert!(parse_ring_exponent(11).is_err());
+		assert!(parse_ring_exponent(12).is_err());
+		assert!(parse_ring_exponent(16).is_err());
+	}
+
+	#[wasm_bindgen_test]
+	fn create_proof_validate_with_commitment() {
+		let entropy = [5u8; 32];
+		let members = make_test_members(10);
+		let context = b"Context";
+		let message = b"FooBar";
+
+		let result = one_shot(
+			TEST_RING_EXPONENT,
+			Uint8Array::from(entropy.as_slice()),
+			Uint8Array::from(members.encode().to_vec().as_slice()),
+			Uint8Array::from(context.as_slice()),
+			Uint8Array::from(message.as_slice()),
+		)
+		.expect("one_shot should produce a proof");
+
+		let proof = Uint8Array::new(
+			&js_sys::Reflect::get(&result, &JsValue::from_str("proof")).expect("proof"),
+		);
+		let alias = Uint8Array::new(
+			&js_sys::Reflect::get(&result, &JsValue::from_str("alias")).expect("alias"),
+		);
+
+		let commitment = members_root(
+			TEST_RING_EXPONENT,
+			Uint8Array::from(&members.encode().to_vec()[..]),
+		)
+		.expect("members_root");
+
+		let validated_alias = validate_with_commitment(
+			TEST_RING_EXPONENT,
+			proof,
+			commitment,
+			Uint8Array::from(context.as_slice()),
+			Uint8Array::from(message.as_slice()),
+		)
+		.expect("validate_with_commitment should succeed");
+
+		assert_eq!(alias.to_vec(), validated_alias.to_vec());
+	}
+
+	#[wasm_bindgen_test]
 	fn create_proof_validate_proof() {
 		let entropy = [5u8; 32];
 		let js_member = member_from_entropy(Uint8Array::from(entropy.as_slice()));
@@ -546,7 +643,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -563,7 +660,7 @@ mod tests {
 		let proof = Uint8Array::new(&proof);
 
 		let validated_alias = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -630,7 +727,7 @@ mod tests {
 
 		// Create JS Proof
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(&alice_entropy[..]),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(&context[..]),
@@ -665,7 +762,7 @@ mod tests {
 		assert_eq!(js_proof.to_vec().len(), proof.encode().len());
 
 		let js_proof_alias = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			js_proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -675,7 +772,7 @@ mod tests {
 		assert_eq!(js_proof_alias.to_vec(), alias.to_vec());
 
 		let rs_proof_alias = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(&proof.encode().to_vec()[..]),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -739,7 +836,7 @@ mod tests {
 		// Get alias via one_shot proof
 		let members = make_test_members(10);
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -776,7 +873,7 @@ mod tests {
 
 		let members = make_test_members(10);
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -794,7 +891,7 @@ mod tests {
 
 		// Valid proof with correct alias should return true
 		let valid = is_valid(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof.clone(),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -807,7 +904,7 @@ mod tests {
 		// Wrong alias should return false
 		let wrong_alias = Uint8Array::from(&[0u8; 32][..]);
 		let invalid = is_valid(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -827,7 +924,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = create_multi_context(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(&entropy[..]),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(&contexts.encode()[..]),
@@ -845,7 +942,7 @@ mod tests {
 
 		// Validate multi-context proof
 		let validated_aliases = validate_multi_context(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof.clone(),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(&contexts.encode()[..]),
@@ -862,7 +959,7 @@ mod tests {
 
 		// is_valid_multi_context should confirm validity
 		let valid = is_valid_multi_context(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(&contexts.encode()[..]),
@@ -930,7 +1027,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -945,7 +1042,7 @@ mod tests {
 		// Validating with a different context should fail
 		let wrong_context = b"WrongContext";
 		let result = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(wrong_context.as_slice()),
@@ -962,7 +1059,7 @@ mod tests {
 		let message = b"CorrectMessage";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -977,7 +1074,7 @@ mod tests {
 		// Validating with a different message should fail
 		let wrong_message = b"WrongMessage";
 		let result = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -994,7 +1091,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -1009,7 +1106,7 @@ mod tests {
 		// Validating with a different members set should fail
 		let different_members = make_test_members(8);
 		let result = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&different_members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -1019,13 +1116,13 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
-	fn test_invalid_domain_size_rejected() {
+	fn test_invalid_ring_exponent_rejected() {
 		let entropy = [5u8; 32];
 		let members = make_test_members(10);
 		let context = b"Context";
 		let message = b"FooBar";
 
-		// Domain size 13 is not valid
+		// Ring exponent 13 is not valid (valid values: 9, 10, 14)
 		let result = one_shot(
 			13,
 			Uint8Array::from(entropy.as_slice()),
@@ -1045,7 +1142,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(non_member_entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -1062,7 +1159,7 @@ mod tests {
 		let empty_message = b"";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(empty_context.as_slice()),
@@ -1075,7 +1172,7 @@ mod tests {
 		let proof = Uint8Array::new(&proof);
 
 		let alias = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(empty_context.as_slice()),
@@ -1092,10 +1189,10 @@ mod tests {
 		let encoded = Uint8Array::from(&members.encode().to_vec()[..]);
 
 		let root =
-			members_root(TEST_DOMAIN_SIZE, encoded.clone()).expect("members_root should succeed");
+			members_root(TEST_RING_EXPONENT, encoded.clone()).expect("members_root should succeed");
 		assert_eq!(root.to_vec().len(), 768);
 
-		let inter = members_intermediate(TEST_DOMAIN_SIZE, encoded)
+		let inter = members_intermediate(TEST_RING_EXPONENT, encoded)
 			.expect("members_intermediate should succeed");
 		assert_eq!(inter.to_vec().len(), 848);
 	}
@@ -1106,9 +1203,9 @@ mod tests {
 		let encoded = Uint8Array::from(&members.encode().to_vec()[..]);
 
 		let root1 =
-			members_root(TEST_DOMAIN_SIZE, encoded.clone()).expect("should succeed");
+			members_root(TEST_RING_EXPONENT, encoded.clone()).expect("should succeed");
 		let root2 =
-			members_root(TEST_DOMAIN_SIZE, encoded).expect("should succeed");
+			members_root(TEST_RING_EXPONENT, encoded).expect("should succeed");
 
 		// Same members, same domain -> same commitment
 		assert_eq!(root1.to_vec(), root2.to_vec());
@@ -1125,7 +1222,7 @@ mod tests {
 		let message_a = b"MessageA";
 
 		let result_a = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy_a.as_slice()),
 			Uint8Array::from(encoded_members.as_slice()),
 			Uint8Array::from(context_a.as_slice()),
@@ -1138,7 +1235,7 @@ mod tests {
 		let message_b = b"MessageB";
 
 		let result_b = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy_b.as_slice()),
 			Uint8Array::from(encoded_members.as_slice()),
 			Uint8Array::from(context_b.as_slice()),
@@ -1165,7 +1262,7 @@ mod tests {
 		let encoded_tuples = tuples.encode();
 
 		let aliases = batch_validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(encoded_members.as_slice()),
 			Uint8Array::from(encoded_tuples.as_slice()),
 		)
@@ -1208,21 +1305,21 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
-	fn test_domain12_proof() {
+	fn test_r2e10_proof() {
 		let entropy = [3u8; 32];
 		let members = make_test_members(10);
 		let context = b"Context";
 		let message = b"FooBar";
 
-		// Create and validate with Domain12
+		// Create and validate with R2e10 (FFT Domain12)
 		let result = one_shot(
-			12,
+			10,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
 			Uint8Array::from(message.as_slice()),
 		)
-		.expect("one_shot with domain 12 should work");
+		.expect("one_shot with R2e10 should work");
 
 		let proof =
 			js_sys::Reflect::get(&result, &JsValue::from_str("proof")).expect("proof should exist");
@@ -1232,13 +1329,13 @@ mod tests {
 		let alias = Uint8Array::new(&alias);
 
 		let validated_alias = validate(
-			12,
+			10,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
 			Uint8Array::from(message.as_slice()),
 		)
-		.expect("validate with domain 12 should succeed");
+		.expect("validate with R2e10 should succeed");
 
 		assert_eq!(alias.to_vec(), validated_alias.to_vec());
 	}
@@ -1251,7 +1348,7 @@ mod tests {
 		let message = b"FooBar";
 
 		let result = one_shot(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -1264,7 +1361,7 @@ mod tests {
 		let proof = Uint8Array::new(&proof);
 
 		let validated = validate(
-			TEST_DOMAIN_SIZE,
+			TEST_RING_EXPONENT,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
@@ -1276,15 +1373,15 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
-	fn test_cross_domain_proof_fails() {
+	fn test_cross_ring_exponent_proof_fails() {
 		let entropy = [5u8; 32];
 		let members = make_test_members(10);
 		let context = b"Context";
 		let message = b"FooBar";
 
-		// Create proof with domain 11
+		// Create proof with R2e9
 		let result = one_shot(
-			11,
+			9,
 			Uint8Array::from(entropy.as_slice()),
 			Uint8Array::from(members.encode().to_vec().as_slice()),
 			Uint8Array::from(context.as_slice()),
@@ -1296,9 +1393,9 @@ mod tests {
 			js_sys::Reflect::get(&result, &JsValue::from_str("proof")).expect("proof should exist");
 		let proof = Uint8Array::new(&proof);
 
-		// Validate with domain 12 should fail
+		// Validate with R2e10 should fail
 		let result = validate(
-			12,
+			10,
 			proof,
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
