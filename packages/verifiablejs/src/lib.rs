@@ -7,9 +7,10 @@ use alloc::vec::Vec;
 use js_sys::{Boolean, JsString, Object, Uint8Array};
 use parity_scale_codec::{Decode, Encode};
 use verifiable::ring::ark_vrf::ring::SrsLookup;
+use verifiable::ring::ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2;
 use verifiable::{
 	ring::{
-		bandersnatch::{BandersnatchSha512Ell2, BandersnatchVrfVerifiable},
+		bandersnatch::BandersnatchVrfVerifiable,
 		ring_verifier_builder_params, RingDomainSize, RingSize, StaticChunk,
 	},
 	Alias, BatchProofItem, Entropy, GenerateVerifiable,
@@ -54,10 +55,14 @@ fn build_members_commitment(
 	let capacity = RingSize::from(ds);
 
 	let builder_params = ring_verifier_builder_params::<BandersnatchSha512Ell2>(ds);
-	let get_many = |range| {
+	let get_many = |range: core::ops::Range<usize>| {
 		(&builder_params)
 			.lookup(range)
-			.map(|v| v.into_iter().map(|i| StaticChunk(i)).collect::<Vec<_>>())
+			.map(|v| {
+				v.into_iter()
+					.map(|i| StaticChunk::<BandersnatchSha512Ell2>(i))
+					.collect::<Vec<_>>()
+			})
 			.ok_or(())
 	};
 
@@ -93,17 +98,7 @@ export interface OneShotResult {
     message: Uint8Array;
 }
 
-export interface MultiContextResult {
-    proof: Uint8Array;
-    aliases: Uint8Array;
-    member: Uint8Array;
-    members: Uint8Array;
-    contexts: Uint8Array;
-    message: Uint8Array;
-}
-
 export function one_shot(ring_exponent: RingExponent, entropy: Uint8Array, members: Uint8Array, context: Uint8Array, message: Uint8Array): OneShotResult;
-export function create_multi_context(ring_exponent: RingExponent, entropy: Uint8Array, members: Uint8Array, contexts: Uint8Array, message: Uint8Array): MultiContextResult;
 "#;
 
 #[wasm_bindgen(skip_typescript)]
@@ -170,91 +165,6 @@ pub fn one_shot(
 	Ok(obj)
 }
 
-#[wasm_bindgen(skip_typescript)]
-pub fn create_multi_context(
-	ring_exponent: u32,
-	entropy: Uint8Array,
-	members: Uint8Array,
-	contexts: Uint8Array,
-	message: Uint8Array,
-) -> Result<Object, JsString> {
-	let capacity = parse_capacity(ring_exponent)?;
-
-	let entropy_vec = entropy.to_vec();
-	let entropy = Entropy::decode(&mut &entropy_vec[..])
-		.map_err(|_| JsString::from("Entropy decoding failed"))?;
-
-	// Secret
-	let secret = Bvv::new_secret(entropy);
-
-	// Member
-	let member = Bvv::member_from_secret(&secret);
-	let member_encoded = member.encode();
-
-	// All Members
-	let raw_members = members.to_vec();
-	let decoded_members = Vec::<<Bvv as GenerateVerifiable>::Member>::decode(&mut &raw_members[..])
-		.map_err(|_| JsString::from("Decoding Members failed"))?;
-	let members_encoded = decoded_members.encode();
-
-	// Decode contexts (SCALE-encoded Vec<Vec<u8>>)
-	let raw_contexts = contexts.to_vec();
-	let decoded_contexts = Vec::<Vec<u8>>::decode(&mut &raw_contexts[..])
-		.map_err(|_| JsString::from("Decoding Contexts failed"))?;
-	let contexts_encoded = decoded_contexts.encode();
-
-	// Open
-	let commitment = Bvv::open(capacity, &member, decoded_members.into_iter())
-		.map_err(|_| JsString::from("Verifiable::open failed"))?;
-
-	// Create multi-context proof
-	let message_bytes = &message.to_vec()[..];
-	let context_refs: Vec<&[u8]> = decoded_contexts.iter().map(|c| c.as_slice()).collect();
-	let (proof, aliases) =
-		Bvv::create_multi_context(commitment, &secret, &context_refs, message_bytes)
-			.map_err(|_| JsString::from("Verifiable::create_multi_context failed"))?;
-
-	// Return Results
-	let obj = Object::new();
-	js_sys::Reflect::set(
-		&obj,
-		&"member".into(),
-		&Uint8Array::from(&member_encoded[..]),
-	)
-	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"members".into(),
-		&Uint8Array::from(&members_encoded[..]),
-	)
-	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"proof".into(),
-		&Uint8Array::from(&Encode::encode(&proof)[..]),
-	)
-	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"aliases".into(),
-		&Uint8Array::from(&Encode::encode(&aliases)[..]),
-	)
-	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"message".into(),
-		&Uint8Array::from(&message_bytes[..]),
-	)
-	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"contexts".into(),
-		&Uint8Array::from(&contexts_encoded[..]),
-	)
-	.unwrap();
-	Ok(obj)
-}
-
 /// Validate a ring proof against a pre-built 768-byte SCALE-encoded
 /// `MembersCommitment` — the ring root as stored by `pallet-members` on chain.
 ///
@@ -313,36 +223,6 @@ pub fn validate(
 }
 
 #[wasm_bindgen]
-pub fn validate_multi_context(
-	ring_exponent: u32,
-	proof: Uint8Array,
-	members: Uint8Array,
-	contexts: Uint8Array,
-	message: Uint8Array,
-) -> Result<Uint8Array, JsString> {
-	let capacity = parse_capacity(ring_exponent)?;
-
-	let proof = proof.to_vec();
-	let proof: <Bvv as GenerateVerifiable>::Proof =
-		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
-
-	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
-
-	let raw_contexts = contexts.to_vec();
-	let decoded_contexts = Vec::<Vec<u8>>::decode(&mut &raw_contexts[..])
-		.map_err(|_| JsString::from("Decoding Contexts failed"))?;
-	let context_refs: Vec<&[u8]> = decoded_contexts.iter().map(|c| c.as_slice()).collect();
-
-	let message = &message.to_vec()[..];
-	let aliases =
-		Bvv::validate_multi_context(capacity, &proof, &members_commitment, &context_refs, message)
-			.map_err(|_| JsString::from("Multi-context proof not able to be validated"))?;
-
-	Ok(Uint8Array::from(&aliases.encode()[..]))
-}
-
-#[wasm_bindgen]
 pub fn is_valid(
 	ring_exponent: u32,
 	proof: Uint8Array,
@@ -367,46 +247,6 @@ pub fn is_valid(
 	let context = &context.to_vec()[..];
 	let message = &message.to_vec()[..];
 	let valid = Bvv::is_valid(capacity, &proof, &members_commitment, context, &alias, message);
-
-	Ok(valid.into())
-}
-
-#[wasm_bindgen]
-pub fn is_valid_multi_context(
-	ring_exponent: u32,
-	proof: Uint8Array,
-	members: Uint8Array,
-	contexts: Uint8Array,
-	aliases: Uint8Array,
-	message: Uint8Array,
-) -> Result<Boolean, JsString> {
-	let capacity = parse_capacity(ring_exponent)?;
-
-	let proof = proof.to_vec();
-	let proof: <Bvv as GenerateVerifiable>::Proof =
-		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
-
-	let decoded_members = decode_members(members)?;
-	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
-
-	let raw_contexts = contexts.to_vec();
-	let decoded_contexts = Vec::<Vec<u8>>::decode(&mut &raw_contexts[..])
-		.map_err(|_| JsString::from("Decoding Contexts failed"))?;
-	let context_refs: Vec<&[u8]> = decoded_contexts.iter().map(|c| c.as_slice()).collect();
-
-	let raw_aliases = aliases.to_vec();
-	let decoded_aliases = Vec::<Alias>::decode(&mut &raw_aliases[..])
-		.map_err(|_| JsString::from("Decoding Aliases failed"))?;
-
-	let message = &message.to_vec()[..];
-	let valid = Bvv::is_valid_multi_context(
-		capacity,
-		&proof,
-		&members_commitment,
-		&context_refs,
-		&decoded_aliases,
-		message,
-	);
 
 	Ok(valid.into())
 }
@@ -535,10 +375,14 @@ pub fn members_intermediate(ring_exponent: u32, members: Uint8Array) -> Result<U
 	let decoded_members = decode_members(members)?;
 
 	let builder_params = ring_verifier_builder_params::<BandersnatchSha512Ell2>(ds);
-	let get_many = |range| {
+	let get_many = |range: core::ops::Range<usize>| {
 		(&builder_params)
 			.lookup(range)
-			.map(|v| v.into_iter().map(|i| StaticChunk(i)).collect::<Vec<_>>())
+			.map(|v| {
+				v.into_iter()
+					.map(|i| StaticChunk::<BandersnatchSha512Ell2>(i))
+					.collect::<Vec<_>>()
+			})
 			.ok_or(())
 	};
 
@@ -913,61 +757,6 @@ mod tests {
 		)
 		.expect("is_valid should not error");
 		assert!(invalid.is_falsy());
-	}
-
-	#[wasm_bindgen_test]
-	fn test_multi_context_proof() {
-		let entropy = [5u8; 32];
-		let members = make_test_members(10);
-
-		let contexts: Vec<Vec<u8>> = vec![b"Context1".to_vec(), b"Context2".to_vec()];
-		let message = b"FooBar";
-
-		let result = create_multi_context(
-			TEST_RING_EXPONENT,
-			Uint8Array::from(&entropy[..]),
-			Uint8Array::from(&members.encode().to_vec()[..]),
-			Uint8Array::from(&contexts.encode()[..]),
-			Uint8Array::from(&message[..]),
-		)
-		.expect("create_multi_context should work");
-
-		let proof =
-			js_sys::Reflect::get(&result, &JsValue::from_str("proof")).expect("proof should exist");
-		let proof = Uint8Array::new(&proof);
-
-		let aliases = js_sys::Reflect::get(&result, &JsValue::from_str("aliases"))
-			.expect("aliases should exist");
-		let aliases = Uint8Array::new(&aliases);
-
-		// Validate multi-context proof
-		let validated_aliases = validate_multi_context(
-			TEST_RING_EXPONENT,
-			proof.clone(),
-			Uint8Array::from(&members.encode().to_vec()[..]),
-			Uint8Array::from(&contexts.encode()[..]),
-			Uint8Array::from(&message[..]),
-		)
-		.expect("validate_multi_context should succeed");
-
-		assert_eq!(aliases.to_vec(), validated_aliases.to_vec());
-
-		// Decode and verify we got 2 aliases
-		let decoded_aliases =
-			Vec::<Alias>::decode(&mut &validated_aliases.to_vec()[..]).expect("should decode");
-		assert_eq!(decoded_aliases.len(), 2);
-
-		// is_valid_multi_context should confirm validity
-		let valid = is_valid_multi_context(
-			TEST_RING_EXPONENT,
-			proof,
-			Uint8Array::from(&members.encode().to_vec()[..]),
-			Uint8Array::from(&contexts.encode()[..]),
-			aliases,
-			Uint8Array::from(&message[..]),
-		)
-		.expect("is_valid_multi_context should not error");
-		assert!(valid.is_truthy());
 	}
 
 	#[wasm_bindgen_test]
