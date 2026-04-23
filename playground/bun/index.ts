@@ -1,143 +1,143 @@
+import { u8aConcat } from '@polkadot/util'
 import {
-  sign,
-  verify_signature,
-  member_from_entropy,
-  one_shot,
-  validate,
-  validate_with_commitment,
-  members_root,
   alias_in_context,
   is_member_valid,
-} from 'verifiablejs/nodejs';
-import { u8aConcat } from '@polkadot/util';
+  member_from_entropy,
+  members_root,
+  one_shot,
+  sign,
+  validate,
+  validate_with_commitment,
+  verify_signature,
+} from 'verifiablejs/nodejs'
 
 // Ring exponent 9 = R2e9 on chain (capacity 255). Internally mapped to the
 // verifiable crate's FFT Domain11. Matches pallet-members storage keys.
-const RING_EXPONENT = 9;
+const RING_EXPONENT = 9
 
 // Helper function to encode members list using SCALE codec
 function encodeMembers(members: Uint8Array[]): Uint8Array {
   // SCALE encode Vec<Member> where each Member is 32 bytes
   // Compact encode the length (number of items, not bytes)
-  const length = members.length;
-  let compactLength: Uint8Array;
+  const length = members.length
+  let compactLength: Uint8Array
 
   if (length < 64) {
     // Single byte mode: length << 2
-    compactLength = new Uint8Array([length << 2]);
+    compactLength = new Uint8Array([length << 2])
   } else if (length < 16384) {
     // Two byte mode: (length << 2) | 0b01
     compactLength = new Uint8Array([
       ((length & 0x3f) << 2) | 0b01,
-      (length >> 6) & 0xff
-    ]);
+      (length >> 6) & 0xff,
+    ])
   } else {
-    throw new Error('Too many members');
+    throw new Error('Too many members')
   }
 
-  return u8aConcat(compactLength, ...members);
+  return u8aConcat(compactLength, ...members)
 }
 
 async function runExample() {
   try {
-    console.log('Running verifiablejs examples...\n');
+    console.log('Running verifiablejs examples...\n')
 
     // === Example 1: Signature Creation and Verification ===
-    console.log('=== Signature Example ===');
+    console.log('=== Signature Example ===')
 
-    const entropy = new Uint8Array(32);
-    crypto.getRandomValues(entropy);
+    const entropy = new Uint8Array(32)
+    crypto.getRandomValues(entropy)
 
-    console.log('Generating member from entropy...');
-    const member = member_from_entropy(entropy);
-    console.log(`Member generated! Length: ${member.length} bytes\n`);
+    console.log('Generating member from entropy...')
+    const member = member_from_entropy(entropy)
+    console.log(`Member generated! Length: ${member.length} bytes\n`)
 
-    const message = new TextEncoder().encode("Hello from verifiablejs!");
-    console.log('Signing message...');
-    const signature = sign(entropy, message);
-    console.log(`Signature created! Length: ${signature.length} bytes\n`);
+    const message = new TextEncoder().encode('Hello from verifiablejs!')
+    console.log('Signing message...')
+    const signature = sign(entropy, message)
+    console.log(`Signature created! Length: ${signature.length} bytes\n`)
 
-    console.log('Verifying signature...');
-    const isValid = verify_signature(signature, message, member);
-    console.log(`Signature valid: ${isValid}\n`);
+    console.log('Verifying signature...')
+    const isValid = verify_signature(signature, message, member)
+    console.log(`Signature valid: ${isValid}\n`)
 
-    const wrongMessage = new TextEncoder().encode("Wrong message");
-    console.log('Verifying with wrong message...');
-    const isInvalid = verify_signature(signature, wrongMessage, member);
-    console.log(`Signature valid for wrong message: ${isInvalid}\n`);
+    const wrongMessage = new TextEncoder().encode('Wrong message')
+    console.log('Verifying with wrong message...')
+    const isInvalid = verify_signature(signature, wrongMessage, member)
+    console.log(`Signature valid for wrong message: ${isInvalid}\n`)
 
     // === Example 2: Member Validation ===
-    console.log('=== Member Validation ===');
-    console.log(`Member is valid: ${is_member_valid(member)}`);
-    console.log(`Garbage is valid: ${is_member_valid(new Uint8Array(32).fill(0xff))}\n`);
+    console.log('=== Member Validation ===')
+    console.log(`Member is valid: ${is_member_valid(member)}`)
+    console.log(`Garbage is valid: ${is_member_valid(new Uint8Array(32).fill(0xff))}\n`)
 
     // === Example 3: Ring Proof Creation and Validation ===
-    console.log('=== Ring Proof Example ===');
+    console.log('=== Ring Proof Example ===')
 
     // Create a ring of 10 members
-    console.log('Creating ring of 10 members...');
-    const membersList: Uint8Array[] = [];
+    console.log('Creating ring of 10 members...')
+    const membersList: Uint8Array[] = []
     for (let i = 0; i < 10; i++) {
-      const entropy = new Uint8Array(32).fill(i);
-      membersList.push(member_from_entropy(entropy));
+      const entropy = new Uint8Array(32).fill(i)
+      membersList.push(member_from_entropy(entropy))
     }
-    console.log(`Created ${membersList.length} members\n`);
+    console.log(`Created ${membersList.length} members\n`)
 
     // Use member at index 5 to create proof
-    const proverEntropy = new Uint8Array(32).fill(5);
-    const encodedMembers = encodeMembers(membersList);
+    const proverEntropy = new Uint8Array(32).fill(5)
+    const encodedMembers = encodeMembers(membersList)
 
-    const context = new TextEncoder().encode("test-context");
-    const proofMessage = new TextEncoder().encode("test-message");
+    const context = new TextEncoder().encode('test-context')
+    const proofMessage = new TextEncoder().encode('test-message')
 
-    console.log('Creating ring proof...');
-    const result = one_shot(RING_EXPONENT, proverEntropy, encodedMembers, context, proofMessage);
-    console.log('Proof created!');
-    console.log(`Proof length: ${result.proof.length} bytes`);
-    console.log(`Alias length: ${result.alias.length} bytes\n`);
+    console.log('Creating ring proof...')
+    const result = one_shot(RING_EXPONENT, proverEntropy, encodedMembers, context, proofMessage)
+    console.log('Proof created!')
+    console.log(`Proof length: ${result.proof.length} bytes`)
+    console.log(`Alias length: ${result.alias.length} bytes\n`)
 
-    console.log('Validating ring proof...');
-    const validatedAlias = validate(RING_EXPONENT, result.proof, encodedMembers, context, proofMessage);
-    console.log(`Proof validated! Alias length: ${validatedAlias.length} bytes`);
+    console.log('Validating ring proof...')
+    const validatedAlias = validate(RING_EXPONENT, result.proof, encodedMembers, context, proofMessage)
+    console.log(`Proof validated! Alias length: ${validatedAlias.length} bytes`)
 
     // Check if aliases match
     const aliasesMatch = result.alias.length === validatedAlias.length &&
-      result.alias.every((byte: number, i: number) => byte === validatedAlias[i]);
-    console.log(`Aliases match: ${aliasesMatch}\n`);
+      result.alias.every((byte: number, i: number) => byte === validatedAlias[i])
+    console.log(`Aliases match: ${aliasesMatch}\n`)
 
     // === Example 3b: validate_with_commitment (chain-adjacent path) ===
-    console.log('=== Validate With Commitment ===');
+    console.log('=== Validate With Commitment ===')
     // In production, `commitment` would come from `pallet-members` via RPC.
     // Here we compute it locally from the member list.
-    const commitment = members_root(RING_EXPONENT, encodedMembers);
-    console.log(`Ring commitment: ${commitment.length} bytes`);
+    const commitment = members_root(RING_EXPONENT, encodedMembers)
+    console.log(`Ring commitment: ${commitment.length} bytes`)
     const aliasFromCommitment = validate_with_commitment(
       RING_EXPONENT,
       result.proof,
       commitment,
       context,
       proofMessage,
-    );
+    )
     const commitmentAliasesMatch = aliasFromCommitment.length === result.alias.length &&
-      aliasFromCommitment.every((byte: number, i: number) => byte === result.alias[i]);
-    console.log(`Aliases match (commitment path): ${commitmentAliasesMatch}\n`);
+      aliasFromCommitment.every((byte: number, i: number) => byte === result.alias[i])
+    console.log(`Aliases match (commitment path): ${commitmentAliasesMatch}\n`)
 
     // === Example 4: Alias in Context ===
-    console.log('=== Alias in Context ===');
-    const directAlias = alias_in_context(proverEntropy, context);
-    console.log(`Direct alias length: ${directAlias.length} bytes`);
+    console.log('=== Alias in Context ===')
+    const directAlias = alias_in_context(proverEntropy, context)
+    console.log(`Direct alias length: ${directAlias.length} bytes`)
     const directAliasMatches = directAlias.length === result.alias.length &&
-      directAlias.every((byte: number, i: number) => byte === result.alias[i]);
-    console.log(`Direct alias matches proof alias: ${directAliasMatches}\n`);
+      directAlias.every((byte: number, i: number) => byte === result.alias[i])
+    console.log(`Direct alias matches proof alias: ${directAliasMatches}\n`)
 
-    console.log('All operations completed successfully!');
+    console.log('All operations completed successfully!')
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', error)
     if (error instanceof Error) {
-      console.error('Message:', error.message);
-      console.error('Stack:', error.stack);
+      console.error('Message:', error.message)
+      console.error('Stack:', error.stack)
     }
   }
 }
 
-runExample();
+runExample()

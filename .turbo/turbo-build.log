@@ -1,0 +1,48 @@
+
+> verifiable-js-monorepo@0.0.0 build /mnt/projects/identity-backend-root/identity-backend.worktrees/2225-e2e-tests/packages/verifiablejs-local
+> pnpm --filter verifiablejs build
+
+
+> verifiablejs@1.3.0-beta.0 build /mnt/projects/identity-backend-root/identity-backend.worktrees/2225-e2e-tests/packages/verifiablejs-local/packages/verifiablejs
+> npm run build:bundler && npm run build:nodejs && npm run postbuild
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+
+> verifiablejs@1.3.0-beta.0 build:bundler
+> wasm-pack build --release --target bundler --no-pack --out-dir pkg-bundler
+
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+    Finished `release` profile [optimized] target(s) in 0.15s
+[INFO]: ⬇️  Installing wasm-bindgen...
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: ✨   Done in 18.81s
+[INFO]: 📦   Your wasm pkg is ready to publish at /mnt/projects/identity-backend-root/identity-backend.worktrees/2225-e2e-tests/packages/verifiablejs-local/packages/verifiablejs/pkg-bundler.
+[WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.14.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+
+> verifiablejs@1.3.0-beta.0 build:nodejs
+> wasm-pack build --release --target nodejs --no-pack --out-dir pkg-nodejs
+
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+    Finished `release` profile [optimized] target(s) in 0.13s
+[INFO]: ⬇️  Installing wasm-bindgen...
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: ✨   Done in 16.40s
+[INFO]: 📦   Your wasm pkg is ready to publish at /mnt/projects/identity-backend-root/identity-backend.worktrees/2225-e2e-tests/packages/verifiablejs-local/packages/verifiablejs/pkg-nodejs.
+[WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.14.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+
+> verifiablejs@1.3.0-beta.0 postbuild
+> rm -f pkg-bundler/.gitignore pkg-nodejs/.gitignore
+
