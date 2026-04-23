@@ -1,22 +1,22 @@
 [package]
 name = "verifiablejs"
 version = "1.0.0"
-edition = "2021"
-description = "WebAssembly bindings for the Parity Verifiable crate"
 authors = ["Parity Technologies <admin@parity.io>"]
-repository = "https://github.com/paritytech/verifiable.git"
+edition = "2021"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+repository = "https://github.com/paritytech/verifiable.git"
+description = "WebAssembly bindings for the Parity Verifiable crate"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-verifiable = { git = "https://github.com/paritytech/verifiable.git", branch = "main" }
-wasm-bindgen = "0.2.90"
-js-sys = "0.3.66"
 getrandom = { version = "0.2.11", features = ["js"] }
+js-sys = "0.3.66"
 parity-scale-codec = { version = "3.7.4", default-features = false, features = ["derive"] }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
+verifiable = { git = "https://github.com/paritytech/verifiable.git", rev = "f1aa46e57baaa89f90c3abe7878242deb8445028" }
+wasm-bindgen = "0.2.90"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.40"
@@ -24,8 +24,7 @@ wasm-bindgen-test = "0.3.40"
 [features]
 default = ["std"]
 std = [
-    "verifiable/std",
-    "parity-scale-codec/std",
-    "scale-info/std"
+  "verifiable/std",
+  "parity-scale-codec/std",
+  "scale-info/std",
 ]
-small-ring = ["verifiable/small-ring"]
