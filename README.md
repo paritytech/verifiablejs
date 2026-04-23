@@ -43,6 +43,7 @@ import {
   member_from_entropy,
   one_shot,
   validate,
+  validate_with_commitment,
   sign,
   verify_signature,
 } from 'verifiablejs/nodejs'; // or 'verifiablejs/bundler' for browsers
@@ -60,16 +61,20 @@ const encodedMembers = encodeMembers(members); // see Data Encoding section
 const proverEntropy = new Uint8Array(32).fill(5); // member at index 5
 const context = new TextEncoder().encode('my-app');
 const message = new TextEncoder().encode('hello');
-const DOMAIN_SIZE = 11;
+const RING_EXPONENT = 9; // R2e9 — capacity 255. Matches `pallet-members` on chain.
 
-const result = one_shot(DOMAIN_SIZE, proverEntropy, encodedMembers, context, message);
+const result = one_shot(RING_EXPONENT, proverEntropy, encodedMembers, context, message);
 // result.proof  - the ring proof (pass this to a verifier)
 // result.alias  - your pseudonymous alias in this context
 // result.member - your public key
 
-// 4. Verify the proof (anyone can do this)
-const alias = validate(DOMAIN_SIZE, result.proof, encodedMembers, context, message);
+// 4a. Verify the proof from the raw member list
+const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, message);
 // alias matches result.alias - proves someone in the ring sent the message
+
+// 4b. Or verify from a pre-built ring commitment (e.g. fetched from `pallet-members`)
+// const commitment = /* 768 bytes from api.query.members.root(collectionId, ringIndex) */;
+// const alias = validate_with_commitment(RING_EXPONENT, result.proof, commitment, context, message);
 
 // 5. Non-anonymous signatures
 const signature = sign(proverEntropy, message);
@@ -95,17 +100,21 @@ When creating a ring proof, the prover also generates a **context-specific alias
 
 All secret keys are derived from a 32-byte **entropy** value. The same entropy always produces the same secret key and public key (member). Entropy should be generated from a cryptographically secure random source and stored securely.
 
-### Ring Domain Size
+### Ring Exponent
 
-Ring operations require a `domain_size` parameter that controls the maximum number of members the ring can support. This is a trade-off between capacity and performance:
+Ring operations require a `ring_exponent` parameter that controls the maximum number of members the ring can support. Values match the on-chain `RingExponent` enum used by `pallet-members` / `pallet-chunks-manager`.
 
-| `domain_size` | Domain | Max Members | Use Case |
-|---------------|--------|-------------|----------|
-| `11` | 2^11 | ~255 | Testing, small groups |
-| `12` | 2^12 | ~767 | Medium groups |
-| `16` | 2^16 | ~16,127 | Large groups |
+Capacity formula: `2^x − 257`.
 
-Choose the smallest domain that fits your ring. Larger domains increase proof generation and verification time.
+| `ring_exponent` | Chain enum | Max Members | Use Case |
+|---|---|---|---|
+| `9`  | `R2e9`  | 255    | Testing, small groups |
+| `10` | `R2e10` | 767    | Medium groups |
+| `14` | `R2e14` | 16,127 | Large groups |
+
+Choose the smallest ring size that fits your ring. Larger sizes increase proof generation and verification time.
+
+Internally the library maps `ring_exponent` to the `verifiable` crate's FFT `RingDomainSize` (9 → Domain11, 10 → Domain12, 14 → Domain16); you never need to pass the FFT domain number directly.
 
 ### Multi-Context Proofs
 
@@ -135,11 +144,11 @@ Ring operations require pre-computed cryptographic parameters (SRS data and buil
 
 The embedded data includes:
 
-| Component | Domain 11 | Domain 12 | Domain 16 |
-|-----------|-----------|-----------|-----------|
+| Component | R2e9 | R2e10 | R2e14 |
+|---|---|---|---|
 | Builder params | 49 KB | 98 KB | 1.6 MB |
-| Domain commitment | 848 B | 848 B | 848 B |
-| SRS (shared) | 4.7 MB (shared across all domains) | | |
+| Empty commitment | 848 B | 848 B | 848 B |
+| SRS (shared) | 4.7 MB (shared across all ring exponents) | | |
 
 This results in a total WASM binary size of approximately **7.3 MB**. All domain sizes are fully functional out of the box.
 
@@ -186,7 +195,7 @@ is_member_valid(new Uint8Array(32).fill(0xff));  // false
 
 ### Ring Proofs
 
-#### `one_shot(domain_size, entropy, members, context, message): OneShotResult`
+#### `one_shot(ring_exponent, entropy, members, context, message): OneShotResult`
 
 Creates a ring proof in a single call. This is the primary function for proof generation.
 
@@ -194,7 +203,7 @@ Creates a ring proof in a single call. This is the primary function for proof ge
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14) |
 | `entropy` | `Uint8Array` | 32-byte entropy of the prover |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `context` | `Uint8Array` | Context identifier (arbitrary bytes) |
@@ -203,7 +212,7 @@ Creates a ring proof in a single call. This is the primary function for proof ge
 **Returns:** `OneShotResult`
 
 ```typescript
-const result = one_shot(11, proverEntropy, encodedMembers, context, message);
+const result = one_shot(9, proverEntropy, encodedMembers, context, message);
 
 console.log(result.proof);   // Uint8Array - the ring proof (SCALE-encoded)
 console.log(result.alias);   // Uint8Array - 32-byte context-specific alias
@@ -215,7 +224,7 @@ console.log(result.message); // Uint8Array - message (echo)
 
 **Throws:** If entropy is invalid, the prover is not in the members list, or proof generation fails.
 
-#### `validate(domain_size, proof, members, context, message): Uint8Array`
+#### `validate(ring_exponent, proof, members, context, message): Uint8Array`
 
 Validates a ring proof and extracts the prover's alias. This is the primary function for proof verification.
 
@@ -223,7 +232,7 @@ Validates a ring proof and extracts the prover's alias. This is the primary func
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size (must match proof creation) |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (must match proof creation) |
 | `proof` | `Uint8Array` | SCALE-encoded proof from `one_shot` |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `context` | `Uint8Array` | Context identifier (must match proof creation) |
@@ -232,13 +241,36 @@ Validates a ring proof and extracts the prover's alias. This is the primary func
 **Returns:** `Uint8Array` - SCALE-encoded 32-byte alias
 
 ```typescript
-const alias = validate(11, result.proof, encodedMembers, context, message);
+const alias = validate(9, result.proof, encodedMembers, context, message);
 // alias matches result.alias from one_shot
 ```
 
 **Throws:** If the proof is invalid or cannot be decoded.
 
-#### `is_valid(domain_size, proof, members, context, alias, message): boolean`
+#### `validate_with_commitment(ring_exponent, proof, commitment, context, message): Uint8Array`
+
+Validates a ring proof against a pre-built 768-byte `MembersCommitment` (ring root). Recommended for chain-adjacent frontends: fetch the root via RPC (`pallet-members::Root`) and pass it directly — saves the commitment-construction step `validate` performs internally from the member list.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (must match proof creation) |
+| `proof` | `Uint8Array` | SCALE-encoded proof |
+| `commitment` | `Uint8Array` | 768-byte SCALE-encoded `MembersCommitment` |
+| `context` | `Uint8Array` | Context identifier |
+| `message` | `Uint8Array` | Message |
+
+**Returns:** `Uint8Array` - SCALE-encoded 32-byte alias.
+
+```typescript
+const commitment = members_root(9, encodedMembers); // or fetch from chain
+const alias = validate_with_commitment(9, result.proof, commitment, context, message);
+```
+
+**Throws:** If the commitment is malformed or the proof is invalid.
+
+#### `is_valid(ring_exponent, proof, members, context, alias, message): boolean`
 
 Checks whether a ring proof is valid for a given alias, without extracting the alias. Useful when you already know the expected alias and just want a boolean check.
 
@@ -246,7 +278,7 @@ Checks whether a ring proof is valid for a given alias, without extracting the a
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14) |
 | `proof` | `Uint8Array` | SCALE-encoded proof |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `context` | `Uint8Array` | Context identifier |
@@ -256,10 +288,10 @@ Checks whether a ring proof is valid for a given alias, without extracting the a
 **Returns:** `boolean`
 
 ```typescript
-const valid = is_valid(11, result.proof, encodedMembers, context, result.alias, message);
+const valid = is_valid(9, result.proof, encodedMembers, context, result.alias, message);
 // true
 
-const invalid = is_valid(11, result.proof, encodedMembers, context, new Uint8Array(32), message);
+const invalid = is_valid(9, result.proof, encodedMembers, context, new Uint8Array(32), message);
 // false - wrong alias
 ```
 
@@ -267,7 +299,7 @@ const invalid = is_valid(11, result.proof, encodedMembers, context, new Uint8Arr
 
 ### Multi-Context Proofs
 
-#### `create_multi_context(domain_size, entropy, members, contexts, message): MultiContextResult`
+#### `create_multi_context(ring_exponent, entropy, members, contexts, message): MultiContextResult`
 
 Creates a single ring proof that covers multiple contexts simultaneously. Each context produces its own unlinkable alias.
 
@@ -275,7 +307,7 @@ Creates a single ring proof that covers multiple contexts simultaneously. Each c
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14) |
 | `entropy` | `Uint8Array` | 32-byte entropy of the prover |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `contexts` | `Uint8Array` | SCALE-encoded `Vec<Vec<u8>>` of context identifiers |
@@ -290,24 +322,24 @@ const contexts = scaleEncodeVecVecU8([
   new TextEncoder().encode('reputation'),
 ]);
 
-const result = create_multi_context(11, entropy, encodedMembers, contexts, message);
+const result = create_multi_context(9, entropy, encodedMembers, contexts, message);
 
 console.log(result.proof);    // Uint8Array - single proof covering both contexts
 console.log(result.aliases);  // Uint8Array - SCALE-encoded Vec<Alias> (one per context)
 ```
 
-#### `validate_multi_context(domain_size, proof, members, contexts, message): Uint8Array`
+#### `validate_multi_context(ring_exponent, proof, members, contexts, message): Uint8Array`
 
 Validates a multi-context proof and extracts all aliases.
 
 **Returns:** `Uint8Array` - SCALE-encoded `Vec<Alias>` (one 32-byte alias per context)
 
 ```typescript
-const aliases = validate_multi_context(11, result.proof, encodedMembers, contexts, message);
+const aliases = validate_multi_context(9, result.proof, encodedMembers, contexts, message);
 // SCALE-encoded Vec<[u8; 32]>
 ```
 
-#### `is_valid_multi_context(domain_size, proof, members, contexts, aliases, message): boolean`
+#### `is_valid_multi_context(ring_exponent, proof, members, contexts, aliases, message): boolean`
 
 Checks whether a multi-context proof is valid for the given aliases.
 
@@ -315,7 +347,7 @@ Checks whether a multi-context proof is valid for the given aliases.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14) |
 | `proof` | `Uint8Array` | SCALE-encoded proof |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `contexts` | `Uint8Array` | SCALE-encoded `Vec<Vec<u8>>` |
@@ -328,7 +360,7 @@ Checks whether a multi-context proof is valid for the given aliases.
 
 ### Batch Validation
 
-#### `batch_validate(domain_size, members, proof_items): Uint8Array`
+#### `batch_validate(ring_exponent, members, proof_items): Uint8Array`
 
 Efficiently validates multiple proofs against the same member set in a single call. More efficient than validating each proof individually because the ring commitment is built only once.
 
@@ -336,7 +368,7 @@ Efficiently validates multiple proofs against the same member set in a single ca
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `domain_size` | `11 \| 12 \| 16` | Ring domain size |
+| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14) |
 | `members` | `Uint8Array` | SCALE-encoded `Vec<Member>` |
 | `proof_items` | `Uint8Array` | SCALE-encoded `Vec<(Proof, Vec<u8>, Vec<u8>)>` |
 
@@ -364,7 +396,7 @@ const alias = alias_in_context(entropy, context);
 // 32-byte SCALE-encoded alias
 
 // This matches the alias from a ring proof with the same entropy + context:
-const result = one_shot(11, entropy, encodedMembers, context, message);
+const result = one_shot(9, entropy, encodedMembers, context, message);
 // alias === result.alias
 ```
 
@@ -403,25 +435,25 @@ verify_signature(signature, message, wrongMember);     // false
 
 These functions precompute ring commitments for use in chain storage or other scenarios where the commitment is built ahead of time.
 
-#### `members_root(domain_size: number, members: Uint8Array): Uint8Array`
+#### `members_root(ring_exponent: number, members: Uint8Array): Uint8Array`
 
 Computes the finalized ring commitment (`MembersCommitment`) from a SCALE-encoded member list. This is the compact representation used for on-chain storage and proof verification.
 
 **Returns:** `Uint8Array` - 768-byte commitment
 
 ```typescript
-const commitment = members_root(11, encodedMembers);
+const commitment = members_root(9, encodedMembers);
 // 768 bytes
 ```
 
-#### `members_intermediate(domain_size: number, members: Uint8Array): Uint8Array`
+#### `members_intermediate(ring_exponent: number, members: Uint8Array): Uint8Array`
 
 Computes the intermediate ring builder state (`MembersSet`) from a SCALE-encoded member list. This is the state before finalization, useful for chain genesis or incremental member addition.
 
 **Returns:** `Uint8Array` - 848-byte intermediate
 
 ```typescript
-const intermediate = members_intermediate(11, encodedMembers);
+const intermediate = members_intermediate(9, encodedMembers);
 // 848 bytes
 ```
 
@@ -549,8 +581,8 @@ const encoded = contexts.toU8a();
 ## TypeScript Types
 
 ```typescript
-/** Ring domain size controlling maximum ring capacity. */
-type RingDomainSize = 11 | 12 | 16;
+/** On-chain `RingExponent`. Capacity formula: 2^x − 257. */
+type RingExponent = 9 | 10 | 14;
 
 /** Result from one_shot() proof creation. */
 interface OneShotResult {

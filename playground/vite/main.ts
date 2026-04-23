@@ -1,8 +1,19 @@
-import { sign, verify_signature, member_from_entropy, one_shot, validate, alias_in_context, is_member_valid } from 'verifiablejs/bundler';
+import {
+  sign,
+  verify_signature,
+  member_from_entropy,
+  one_shot,
+  validate,
+  validate_with_commitment,
+  members_root,
+  alias_in_context,
+  is_member_valid,
+} from 'verifiablejs/bundler';
 import { u8aConcat } from '@polkadot/util';
 
-// Ring domain size: 11 = Domain11 (smallest, fastest, max ~255 members)
-const DOMAIN_SIZE = 11;
+// Ring exponent 9 = R2e9 on chain (capacity 255). Maps internally to the
+// verifiable crate's FFT Domain11.
+const RING_EXPONENT = 9;
 
 // Helper function to encode members list using SCALE codec
 function encodeMembers(members: Uint8Array[]): Uint8Array {
@@ -83,19 +94,35 @@ button.addEventListener('click', async () => {
     const proofMessage = new TextEncoder().encode("test-message");
 
     output.textContent += 'Creating ring proof...\n';
-    const result = one_shot(DOMAIN_SIZE, proverEntropy, encodedMembers, context, proofMessage);
+    const result = one_shot(RING_EXPONENT, proverEntropy, encodedMembers, context, proofMessage);
     output.textContent += `Proof created!\n`;
     output.textContent += `Proof length: ${result.proof.length} bytes\n`;
     output.textContent += `Alias length: ${result.alias.length} bytes\n\n`;
 
     output.textContent += 'Validating ring proof...\n';
-    const validatedAlias = validate(DOMAIN_SIZE, result.proof, encodedMembers, context, proofMessage);
+    const validatedAlias = validate(RING_EXPONENT, result.proof, encodedMembers, context, proofMessage);
     output.textContent += `Proof validated! Alias length: ${validatedAlias.length} bytes\n`;
 
     // Check if aliases match
     const aliasesMatch = result.alias.length === validatedAlias.length &&
       result.alias.every((byte: number, i: number) => byte === validatedAlias[i]);
     output.textContent += `Aliases match: ${aliasesMatch}\n\n`;
+
+    // === Example 3b: validate_with_commitment (chain-adjacent path) ===
+    output.textContent += '=== Validate With Commitment ===\n';
+    // In production, `commitment` would come from `pallet-members` via RPC.
+    const commitment = members_root(RING_EXPONENT, encodedMembers);
+    output.textContent += `Ring commitment: ${commitment.length} bytes\n`;
+    const aliasFromCommitment = validate_with_commitment(
+      RING_EXPONENT,
+      result.proof,
+      commitment,
+      context,
+      proofMessage,
+    );
+    const commitmentAliasesMatch = aliasFromCommitment.length === result.alias.length &&
+      aliasFromCommitment.every((byte: number, i: number) => byte === result.alias[i]);
+    output.textContent += `Aliases match (commitment path): ${commitmentAliasesMatch}\n\n`;
 
     // === Example 4: Alias in Context ===
     output.textContent += '=== Alias in Context ===\n';
