@@ -11,7 +11,7 @@ use verifiable::ring::ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2;
 use verifiable::{
 	ring::{
 		bandersnatch::BandersnatchVrfVerifiable,
-		ring_verifier_builder_params, RingDomainSize, RingSize, StaticChunk,
+		ring_verifier_builder_params, RingDomainSize, StaticChunk,
 	},
 	Alias, BatchProofItem, Entropy, GenerateVerifiable,
 };
@@ -34,9 +34,8 @@ fn parse_ring_exponent(ring_exponent: u32) -> Result<RingDomainSize, JsString> {
 	}
 }
 
-fn parse_capacity(ring_exponent: u32) -> Result<<Bvv as GenerateVerifiable>::Capacity, JsString> {
-	let ds = parse_ring_exponent(ring_exponent)?;
-	Ok(RingSize::from(ds))
+fn parse_capacity(ring_exponent: u32) -> Result<<Bvv as GenerateVerifiable>::Config, JsString> {
+	parse_ring_exponent(ring_exponent)
 }
 
 fn decode_members(
@@ -52,7 +51,6 @@ fn build_members_commitment(
 	members: Vec<<Bvv as GenerateVerifiable>::Member>,
 ) -> Result<<Bvv as GenerateVerifiable>::Members, JsString> {
 	let ds = parse_ring_exponent(ring_exponent)?;
-	let capacity = RingSize::from(ds);
 
 	let builder_params = ring_verifier_builder_params::<BandersnatchSha512Ell2>(ds);
 	let get_many = |range: core::ops::Range<usize>| {
@@ -66,7 +64,7 @@ fn build_members_commitment(
 			.ok_or(())
 	};
 
-	let mut inter = Bvv::start_members(capacity);
+	let mut inter = Bvv::start_members(ds);
 	Bvv::push_members(&mut inter, members.into_iter(), get_many)
 		.map_err(|_| JsString::from("push_members failed"))?;
 	Ok(Bvv::finish_members(inter))
@@ -370,7 +368,6 @@ pub fn members_root(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Arra
 #[wasm_bindgen]
 pub fn members_intermediate(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
 	let ds = parse_ring_exponent(ring_exponent)?;
-	let capacity = RingSize::from(ds);
 
 	let decoded_members = decode_members(members)?;
 
@@ -386,7 +383,7 @@ pub fn members_intermediate(ring_exponent: u32, members: Uint8Array) -> Result<U
 			.ok_or(())
 	};
 
-	let mut inter = Bvv::start_members(capacity);
+	let mut inter = Bvv::start_members(ds);
 	Bvv::push_members(&mut inter, decoded_members.into_iter(), get_many)
 		.map_err(|_| JsString::from("push_members failed"))?;
 
@@ -562,7 +559,7 @@ mod tests {
 		let context = b"Context";
 		let message = b"FooBar";
 
-		let capacity = RingSize::from(RingDomainSize::Domain11);
+		let capacity = RingDomainSize::Domain11;
 		let commitment =
 			Bvv::open(capacity, &alice_member, members.clone().into_iter()).unwrap();
 		let secret = Bvv::new_secret(alice_entropy);
