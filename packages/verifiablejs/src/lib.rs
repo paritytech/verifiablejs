@@ -151,12 +151,23 @@ pub fn one_shot(
 		&Uint8Array::from(&members_encoded[..]),
 	)
 	.unwrap();
-	js_sys::Reflect::set(
-		&obj,
-		&"proof".into(),
-		&Uint8Array::from(&Encode::encode(&proof)[..]),
-	)
-	.unwrap();
+	// Return raw canonical proof bytes (no SCALE compact-length prefix).
+	// `BoundedVec<u8, _>` derefs to `&[u8]`, so slicing into it yields the
+	// canonical bytes verbatim — the same form the chain's
+	// `RingVrfSignature::deserialize_canonical` expects when reading the
+	// proof field of a transaction extension.
+	//
+	// Historical note: prior to this commit `&Encode::encode(&proof)[..]`
+	// was used, which prepended a 2-byte SCALE compact-length prefix.
+	// That broke every on-chain consumer because the verifier
+	// (`verifiable/src/ring/mod.rs`'s `deserialize_canonical`) uses
+	// ark-serialize directly and rejects trailing bytes. Local validation
+	// via `validate_with_commitment` masked the issue by calling
+	// `Decode::decode` which stripped the prefix. Symmetric with `sign()`,
+	// which has always returned raw bytes via `Encode::encode(&[u8; N])`
+	// (fixed-size arrays SCALE-encode with no prefix).
+	js_sys::Reflect::set(&obj, &"proof".into(), &Uint8Array::from(&proof[..]))
+		.unwrap();
 	js_sys::Reflect::set(&obj, &"alias".into(), &Uint8Array::from(&alias[..])).unwrap();
 	js_sys::Reflect::set(&obj, &"message".into(), &Uint8Array::from(&message[..])).unwrap();
 	js_sys::Reflect::set(&obj, &"context".into(), &Uint8Array::from(&context[..])).unwrap();
@@ -179,9 +190,14 @@ pub fn validate_with_commitment(
 ) -> Result<Uint8Array, JsString> {
 	let capacity = parse_capacity(ring_exponent)?;
 
+	// Proof is raw canonical bytes (matches what `one_shot` now returns and
+	// what chain extensions submit on the wire). Wrap into the bounded vec
+	// without any compact-length-prefix decoding — `BoundedVec::try_from`
+	// just bounds-checks the length.
 	let proof_vec = proof.to_vec();
-	let proof: <Bvv as GenerateVerifiable>::Proof = Decode::decode(&mut &proof_vec[..])
-		.map_err(|_| JsString::from("Decoding Proof failed"))?;
+	let proof: <Bvv as GenerateVerifiable>::Proof = proof_vec
+		.try_into()
+		.map_err(|_| JsString::from("Proof exceeds maximum bounded size"))?;
 
 	let commitment_vec = commitment.to_vec();
 	let members_commitment = <Bvv as GenerateVerifiable>::Members::decode(&mut &commitment_vec[..])
@@ -205,9 +221,11 @@ pub fn validate(
 ) -> Result<Uint8Array, JsString> {
 	let capacity = parse_capacity(ring_exponent)?;
 
-	let proof = proof.to_vec();
-	let proof: <Bvv as GenerateVerifiable>::Proof =
-		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
+	// Raw canonical proof bytes — wrap into BoundedVec via length check only.
+	let proof_vec = proof.to_vec();
+	let proof: <Bvv as GenerateVerifiable>::Proof = proof_vec
+		.try_into()
+		.map_err(|_| JsString::from("Proof exceeds maximum bounded size"))?;
 
 	let decoded_members = decode_members(members)?;
 	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
@@ -231,9 +249,11 @@ pub fn is_valid(
 ) -> Result<Boolean, JsString> {
 	let capacity = parse_capacity(ring_exponent)?;
 
-	let proof = proof.to_vec();
-	let proof: <Bvv as GenerateVerifiable>::Proof =
-		Decode::decode(&mut &proof[..]).map_err(|_| JsString::from("Decoding Proof failed"))?;
+	// Raw canonical proof bytes — wrap into BoundedVec via length check only.
+	let proof_vec = proof.to_vec();
+	let proof: <Bvv as GenerateVerifiable>::Proof = proof_vec
+		.try_into()
+		.map_err(|_| JsString::from("Proof exceeds maximum bounded size"))?;
 
 	let decoded_members = decode_members(members)?;
 	let members_commitment = build_members_commitment(ring_exponent, decoded_members)?;
@@ -1029,16 +1049,17 @@ mod tests {
 		)
 		.expect("second one_shot should work");
 
-		// Extract proofs
+		// Extract proofs — `one_shot` now returns raw canonical bytes (no
+		// SCALE prefix), so wrap into the BoundedVec via length check only.
 		let proof_a = js_sys::Reflect::get(&result_a, &JsValue::from_str("proof")).unwrap();
 		let proof_a = Uint8Array::new(&proof_a);
 		let proof_a_decoded: <Bvv as GenerateVerifiable>::Proof =
-			Decode::decode(&mut &proof_a.to_vec()[..]).unwrap();
+			proof_a.to_vec().try_into().unwrap();
 
 		let proof_b = js_sys::Reflect::get(&result_b, &JsValue::from_str("proof")).unwrap();
 		let proof_b = Uint8Array::new(&proof_b);
 		let proof_b_decoded: <Bvv as GenerateVerifiable>::Proof =
-			Decode::decode(&mut &proof_b.to_vec()[..]).unwrap();
+			proof_b.to_vec().try_into().unwrap();
 
 		// Encode as Vec<(Proof, Vec<u8>, Vec<u8>)> for batch_validate
 		let tuples: Vec<(<Bvv as GenerateVerifiable>::Proof, Vec<u8>, Vec<u8>)> = vec![
