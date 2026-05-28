@@ -619,8 +619,11 @@ mod tests {
 		let js_message = get_u8a_value("message");
 		assert_eq!(js_message.to_vec(), message.to_vec());
 
+		// `one_shot` returns raw canonical proof bytes (no SCALE prefix),
+		// and `validate` now expects the same — compare against `proof.len()`
+		// / `&proof[..]`, not `proof.encode()`.
 		let js_proof = get_u8a_value("proof");
-		assert_eq!(js_proof.to_vec().len(), proof.encode().len());
+		assert_eq!(js_proof.to_vec().len(), proof.len());
 
 		let js_proof_alias = validate(
 			TEST_RING_EXPONENT,
@@ -634,7 +637,7 @@ mod tests {
 
 		let rs_proof_alias = validate(
 			TEST_RING_EXPONENT,
-			Uint8Array::from(&proof.encode().to_vec()[..]),
+			Uint8Array::from(&proof[..]),
 			Uint8Array::from(&members.encode().to_vec()[..]),
 			Uint8Array::from(context.as_slice()),
 			Uint8Array::from(message.as_slice()),
