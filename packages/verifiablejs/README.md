@@ -1,13 +1,10 @@
 # Verifiable JS
 
-This package provides JavaScript/TypeScript bindings for the [Parity Verifiable](https://github.com/paritytech/verifiable) crate.
+JavaScript/TypeScript WebAssembly bindings for the [Parity Verifiable](https://github.com/paritytech/verifiable) crate.
 
-## Features
+Anonymous membership proofs using ring VRFs on the Bandersnatch elliptic curve. Prove you belong to a group without revealing which member you are.
 
-- Generate proofs of membership in a set with known members
-- Validate proofs
-- Sign and verify messages
-- All cryptographic operations are performed using the Bandersnatch curve implementation
+**Full documentation, API reference, and examples: [github.com/paritytech/verifiable-js](https://github.com/paritytech/verifiable-js#readme)**
 
 ## Installation
 
@@ -15,74 +12,51 @@ This package provides JavaScript/TypeScript bindings for the [Parity Verifiable]
 npm install verifiablejs
 ```
 
-## Usage
-
-### For bundler environments (Webpack, Vite, Rollup, etc.)
+## Quick Start
 
 ```typescript
-import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs/bundler';
+import { member_from_entropy, one_shot, validate } from 'verifiablejs/nodejs'
+// or 'verifiablejs/bundler' for browsers
 
-// Initialize the WASM module
-await init();
+// Create a ring of members
+const members = []
+for (let i = 0; i < 10; i++) {
+  members.push(member_from_entropy(new Uint8Array(32).fill(i)))
+}
+const encodedMembers = encodeMembers(members) // SCALE-encode (see full docs)
 
-// Generate a proof
-const entropy = new Uint8Array(32); // Your entropy bytes
-const members = new Uint8Array(...); // Your encoded members list
-const context = new TextEncoder().encode("my-context");
-const message = new TextEncoder().encode("my-message");
+// Create an anonymous ring proof
+const entropy = new Uint8Array(32).fill(5)
+const context = new TextEncoder().encode('my-app')
+const message = new TextEncoder().encode('hello')
 
-const result = one_shot(entropy, members, context, message);
-const { proof, alias, member } = result;
+const result = one_shot(11, entropy, encodedMembers, context, message)
 
-// Validate a proof
-const validatedAlias = validate(proof, members, context, message);
-
-// Sign a message
-const signature = sign(entropy, message);
-
-// Verify a signature
-const isValid = verify_signature(signature, message, member);
+// Verify the proof
+const alias = validate(11, result.proof, encodedMembers, context, message)
 ```
 
-### For Node.js or Bun
+## API Overview
 
-```typescript
-import init, { one_shot, validate, sign, verify_signature, member_from_entropy } from 'verifiablejs/nodejs';
+| Function                 | Description                            |
+| ------------------------ | -------------------------------------- |
+| `member_from_entropy`    | Derive a public key from entropy       |
+| `is_member_valid`        | Check if a public key is valid         |
+| `one_shot`               | Create an anonymous ring proof         |
+| `validate`               | Validate a proof, extract alias        |
+| `is_valid`               | Check proof validity with known alias  |
+| `create_multi_context`   | Proof covering multiple contexts       |
+| `validate_multi_context` | Validate a multi-context proof         |
+| `is_valid_multi_context` | Check multi-context proof validity     |
+| `batch_validate`         | Validate multiple proofs efficiently   |
+| `alias_in_context`       | Compute alias without a proof          |
+| `sign`                   | Non-anonymous message signature        |
+| `verify_signature`       | Verify a signature                     |
+| `members_root`           | Compute ring commitment (768 bytes)    |
+| `members_intermediate`   | Compute intermediate state (848 bytes) |
 
-// Initialize the WASM module
-await init();
-
-// Use the same API as above
-```
-
-## Building
-
-```sh
-npm run build
-```
-
-This builds both bundler and Node.js targets:
-- `wasm-pack build --release --target bundler --features small-ring`
-- `wasm-pack build --release --target nodejs --features small-ring`
-
-## Testing
-
-```sh
-npm test
-```
-
-This will run both Rust and WASM tests:
-- `cargo test --features "small-ring"`
-- `wasm-pack test --node --features small-ring`
-
-## Releasing
-
-This project uses [Changesets](https://github.com/changesets/changesets) for version management.
-
-1. **Create a changeset**: `pnpm changeset` (select bump type: patch/minor/major)
-2. **Version bump**: `pnpm version` (consumes changesets, updates package.json and CHANGELOG.md)
-3. **Publish**: `pnpm release` (builds and publishes to npm)
+All ring functions require a `domain_size` parameter: `11` (~255 members), `12` (~767), or `16` (~16,127).
 
 ## License
 
-Licensed under GPL-3.0-or-later WITH Classpath-exception-2.0
+GPL-3.0-or-later WITH Classpath-exception-2.0

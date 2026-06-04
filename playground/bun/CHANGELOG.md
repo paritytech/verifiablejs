@@ -1,5 +1,15 @@
 # playground-bun
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [e9daf2d]
+- Updated dependencies [70f996c]
+- Updated dependencies [e9daf2d]
+- Updated dependencies [16a6dac]
+  - verifiablejs@1.3.0
+
 ## 0.0.4
 
 ### Patch Changes
