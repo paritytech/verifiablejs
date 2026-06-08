@@ -46,6 +46,35 @@ fn decode_members(
 		.map_err(|_| JsString::from("Decoding Members failed"))
 }
 
+/// SCALE-encode a list of 32-byte member public keys into the `Vec<Member>`
+/// shape that every ring function (`one_shot`, `validate`, `is_valid`,
+/// `batch_validate`, `members_root`, `members_intermediate`) expects for its
+/// `members` parameter.
+///
+/// Each element must be exactly 32 bytes — a Bandersnatch public key as
+/// returned by [`member_from_entropy`]. This is the inverse of the decoding
+/// those functions perform internally; use it instead of hand-rolling the
+/// SCALE `Vec<[u8; 32]>` encoding (compact length prefix + concatenated keys).
+///
+/// Returns an error if any element is not exactly 32 bytes or is not a
+/// well-formed member key.
+#[wasm_bindgen]
+pub fn encode_members(members: Vec<Uint8Array>) -> Result<Uint8Array, JsString> {
+	let decoded = members
+		.into_iter()
+		.map(|m| {
+			let bytes = m.to_vec();
+			if bytes.len() != 32 {
+				return Err(JsString::from("Each member must be exactly 32 bytes"));
+			}
+			<Bvv as GenerateVerifiable>::Member::decode(&mut &bytes[..])
+				.map_err(|_| JsString::from("Invalid member public key"))
+		})
+		.collect::<Result<Vec<_>, _>>()?;
+
+	Ok(Uint8Array::from(&decoded.encode()[..]))
+}
+
 fn build_members_commitment(
 	ring_exponent: u32,
 	members: Vec<<Bvv as GenerateVerifiable>::Member>,
@@ -1212,5 +1241,37 @@ mod tests {
 			Uint8Array::from(message.as_slice()),
 		);
 		assert!(result.is_err());
+	}
+
+	#[wasm_bindgen_test]
+	fn test_encode_members_roundtrip() {
+		let members = make_test_members(10);
+
+		// Build the `Uint8Array[]` a JS caller would pass: one 32-byte key each.
+		let member_arrays: Vec<Uint8Array> = members
+			.iter()
+			.map(|m| Uint8Array::from(&m.encode()[..]))
+			.collect();
+
+		let encoded = encode_members(member_arrays).expect("encode_members should succeed");
+
+		// Output must match the canonical SCALE `Vec<Member>` encoding that the
+		// other functions decode internally.
+		assert_eq!(encoded.to_vec(), members.encode().to_vec());
+
+		// And it must be directly consumable by the ring functions.
+		let root = members_root(TEST_RING_EXPONENT, encoded).expect("members_root should accept it");
+		assert_eq!(root.to_vec().len(), 768);
+	}
+
+	#[wasm_bindgen_test]
+	fn test_encode_members_rejects_wrong_length() {
+		// A 31-byte element is not a valid member key.
+		let bad = vec![Uint8Array::from(&[1u8; 31][..])];
+		assert!(encode_members(bad).is_err());
+
+		// A 33-byte element must also be rejected (no silent truncation).
+		let too_long = vec![Uint8Array::from(&[1u8; 33][..])];
+		assert!(encode_members(too_long).is_err());
 	}
 }

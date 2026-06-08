@@ -40,6 +40,7 @@ The package is published on npm as [`verifiablejs`](https://www.npmjs.com/packag
 
 ```typescript
 import {
+  encode_members,
   member_from_entropy,
   one_shot,
   sign,
@@ -55,7 +56,7 @@ for (let i = 0; i < 10; i++) {
 }
 
 // 2. SCALE-encode the members list
-const encodedMembers = encodeMembers(members) // see Data Encoding section
+const encodedMembers = encode_members(members) // Member[] → Vec<Member>
 
 // 3. Create an anonymous ring proof
 const proverEntropy = new Uint8Array(32).fill(5) // member at index 5
@@ -190,6 +191,19 @@ is_member_valid(member) // true
 
 is_member_valid(new Uint8Array(32).fill(0xff)) // false
 ```
+
+#### `encode_members(members: Uint8Array[]): Uint8Array`
+
+SCALE-encodes an array of 32-byte member public keys into the `Vec<Member>` shape that every ring function (`one_shot`, `validate`, `is_valid`, `batch_validate`, `members_root`, `members_intermediate`) expects for its `members` parameter. This is the inverse of the decoding those functions do internally — use it instead of hand-rolling the SCALE encoding (see [Data Encoding](#data-encoding) for the manual equivalent).
+
+```typescript
+const members = [member_from_entropy(entropyA), member_from_entropy(entropyB)]
+const encodedMembers = encode_members(members)
+
+const result = one_shot(9, proverEntropy, encodedMembers, context, message)
+```
+
+**Throws:** If any element is not exactly 32 bytes, or is not a valid Bandersnatch public key.
 
 ---
 
@@ -466,6 +480,18 @@ All structured data is exchanged using [SCALE codec](https://docs.substrate.io/r
 ### Encoding Members
 
 Members are passed as a SCALE-encoded `Vec<Member>` where each `Member` is a fixed 32-byte public key. The encoding is a compact-encoded length prefix followed by the concatenated member bytes.
+
+The library ships this as a built-in — prefer it over hand-rolling the encoding:
+
+```typescript
+import { encode_members } from 'verifiablejs/nodejs'
+
+// members: Uint8Array[] of 32-byte Bandersnatch public keys
+const encodedMembers = encode_members(members)
+// Throws if any element is not exactly 32 bytes or is not a valid member key.
+```
+
+If you would rather not call into the WASM module, the equivalent encoding by hand is:
 
 ```typescript
 /**
