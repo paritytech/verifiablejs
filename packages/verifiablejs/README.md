@@ -54,9 +54,6 @@ const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, mes
 | `validate`                 | Validate a proof, extract alias           |
 | `validate_with_commitment` | Validate against a ring root (pre-flight) |
 | `is_valid`                 | Check proof validity with known alias     |
-| `create_multi_context`     | Proof covering multiple contexts          |
-| `validate_multi_context`   | Validate a multi-context proof            |
-| `is_valid_multi_context`   | Check multi-context proof validity        |
 | `batch_validate`           | Validate multiple proofs efficiently      |
 | `alias_in_context`         | Compute alias without a proof             |
 | `sign`                     | Non-anonymous message signature           |
