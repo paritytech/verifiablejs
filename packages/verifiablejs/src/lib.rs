@@ -730,6 +730,31 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
+	fn test_identity_point_member_rejected() {
+		// Compressed encoding of the Bandersnatch neutral element: 0x01 followed
+		// by zeros. It passes the subgroup check but has no affine coordinates,
+		// so before verifiable rev 19b03de it slipped through `is_member_valid`
+		// and made `push_members` panic inside the ring backend. Both paths must
+		// now reject it.
+		let mut identity = [0u8; 32];
+		identity[0] = 0x01;
+
+		assert!(is_member_valid(Uint8Array::from(&identity[..])).is_falsy());
+
+		// Building a commitment over a set containing it must error, not trap.
+		let identity_member =
+			<Bvv as GenerateVerifiable>::Member::decode(&mut &identity[..]).unwrap();
+		let mut members = make_test_members(3);
+		members.push(identity_member);
+
+		let result = members_root(
+			TEST_RING_EXPONENT,
+			Uint8Array::from(&members.encode().to_vec()[..]),
+		);
+		assert!(result.is_err());
+	}
+
+	#[wasm_bindgen_test]
 	fn test_is_valid() {
 		let entropy = [5u8; 32];
 		let context = b"Context";
