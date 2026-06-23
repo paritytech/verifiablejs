@@ -13,7 +13,6 @@ This library enables **anonymous membership proofs** using ring VRFs (Verifiable
 - [API Reference](#api-reference)
   - [Key Management](#key-management)
   - [Ring Proofs](#ring-proofs)
-  - [Multi-Context Proofs](#multi-context-proofs)
   - [Batch Validation](#batch-validation)
   - [Aliases](#aliases)
   - [Signatures](#signatures)
@@ -116,10 +115,6 @@ Capacity formula: `2^x − 257`.
 Choose the smallest ring size that fits your ring. Larger sizes increase proof generation and verification time.
 
 Internally the library maps `ring_exponent` to the `verifiable` crate's FFT `RingDomainSize` (9 → Domain11, 10 → Domain12, 14 → Domain16); you never need to pass the FFT domain number directly.
-
-### Multi-Context Proofs
-
-A single proof can cover multiple contexts simultaneously. Instead of generating separate proofs for each context, `create_multi_context` produces one proof with one alias per context. This is more efficient and proves that the same (anonymous) member is acting across all contexts. Up to 16 contexts per proof are supported.
 
 ---
 
@@ -311,67 +306,6 @@ const invalid = is_valid(9, result.proof, encodedMembers, context, new Uint8Arra
 
 ---
 
-### Multi-Context Proofs
-
-#### `create_multi_context(ring_exponent, entropy, members, contexts, message): MultiContextResult`
-
-Creates a single ring proof that covers multiple contexts simultaneously. Each context produces its own unlinkable alias.
-
-**Parameters:**
-
-| Parameter       | Type            | Description                                         |
-| --------------- | --------------- | --------------------------------------------------- |
-| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14)                |
-| `entropy`       | `Uint8Array`    | 32-byte entropy of the prover                       |
-| `members`       | `Uint8Array`    | SCALE-encoded `Vec<Member>`                         |
-| `contexts`      | `Uint8Array`    | SCALE-encoded `Vec<Vec<u8>>` of context identifiers |
-| `message`       | `Uint8Array`    | Message to bind to the proof                        |
-
-**Returns:** `MultiContextResult`
-
-```typescript
-// SCALE-encode contexts
-const contexts = scaleEncodeVecVecU8([
-  new TextEncoder().encode('voting'),
-  new TextEncoder().encode('reputation'),
-])
-
-const result = create_multi_context(9, entropy, encodedMembers, contexts, message)
-
-console.log(result.proof) // Uint8Array - single proof covering both contexts
-console.log(result.aliases) // Uint8Array - SCALE-encoded Vec<Alias> (one per context)
-```
-
-#### `validate_multi_context(ring_exponent, proof, members, contexts, message): Uint8Array`
-
-Validates a multi-context proof and extracts all aliases.
-
-**Returns:** `Uint8Array` - SCALE-encoded `Vec<Alias>` (one 32-byte alias per context)
-
-```typescript
-const aliases = validate_multi_context(9, result.proof, encodedMembers, contexts, message)
-// SCALE-encoded Vec<[u8; 32]>
-```
-
-#### `is_valid_multi_context(ring_exponent, proof, members, contexts, aliases, message): boolean`
-
-Checks whether a multi-context proof is valid for the given aliases.
-
-**Parameters:**
-
-| Parameter       | Type            | Description                                 |
-| --------------- | --------------- | ------------------------------------------- |
-| `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (R2e9 / R2e10 / R2e14)        |
-| `proof`         | `Uint8Array`    | SCALE-encoded proof                         |
-| `members`       | `Uint8Array`    | SCALE-encoded `Vec<Member>`                 |
-| `contexts`      | `Uint8Array`    | SCALE-encoded `Vec<Vec<u8>>`                |
-| `aliases`       | `Uint8Array`    | SCALE-encoded `Vec<Alias>` to check against |
-| `message`       | `Uint8Array`    | Message                                     |
-
-**Returns:** `boolean`
-
----
-
 ### Batch Validation
 
 #### `batch_validate(ring_exponent, members, proof_items): Uint8Array`
@@ -403,7 +337,7 @@ Computes the deterministic alias for a given entropy and context, without creati
 - Precomputing what alias a member will have in a given context
 - Looking up a member's alias without needing the full member list
 
-The alias returned matches what `one_shot` or `create_multi_context` would produce for the same entropy and context.
+The alias returned matches what `one_shot` would produce for the same entropy and context.
 
 ```typescript
 const alias = alias_in_context(entropy, context)
@@ -541,65 +475,18 @@ function encodeMembers(members: Uint8Array[]): Uint8Array {
 }
 ```
 
-### Encoding Contexts for Multi-Context Functions
-
-Multi-context functions accept a SCALE-encoded `Vec<Vec<u8>>`. Each inner `Vec<u8>` is a compact-length-prefixed byte string.
-
-```typescript
-/**
- * SCALE-encode an array of byte arrays into Vec<Vec<u8>>.
- */
-function encodeVecVecU8(items: Uint8Array[]): Uint8Array {
-  const parts: Uint8Array[] = []
-
-  // Outer compact length
-  parts.push(compactEncode(items.length))
-
-  // Each inner Vec<u8>: compact_length + bytes
-  for (const item of items) {
-    parts.push(compactEncode(item.length))
-    parts.push(item)
-  }
-
-  // Concatenate all parts
-  const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
-  const result = new Uint8Array(totalLength)
-  let offset = 0
-  for (const part of parts) {
-    result.set(part, offset)
-    offset += part.length
-  }
-  return result
-}
-
-function compactEncode(value: number): Uint8Array {
-  if (value < 64) {
-    return new Uint8Array([value << 2])
-  } else if (value < 16384) {
-    return new Uint8Array([
-      ((value & 0x3f) << 2) | 0b01,
-      (value >> 6) & 0xff,
-    ])
-  }
-  throw new Error('Value too large for compact encoding')
-}
-```
-
 ### Using `@polkadot/types` for SCALE Encoding
 
 For complex encoding needs, consider using `@polkadot/types`:
 
 ```typescript
-import { Bytes, TypeRegistry, Vec } from '@polkadot/types'
+import { TypeRegistry, Vec } from '@polkadot/types'
 
 const registry = new TypeRegistry()
 
-// Encode Vec<Vec<u8>>
-const contexts = new Vec(registry, Bytes, [
-  new TextEncoder().encode('context-1'),
-  new TextEncoder().encode('context-2'),
-])
-const encoded = contexts.toU8a()
+// Encode Vec<Member> (each Member is a fixed 32-byte key)
+const members = new Vec(registry, '[u8;32]', [memberA, memberB])
+const encoded = members.toU8a()
 ```
 
 ---
@@ -617,16 +504,6 @@ interface OneShotResult {
   member: Uint8Array // 32-byte prover public key
   members: Uint8Array // SCALE-encoded members list (echo)
   context: Uint8Array // Context bytes (echo)
-  message: Uint8Array // Message bytes (echo)
-}
-
-/** Result from create_multi_context() proof creation. */
-interface MultiContextResult {
-  proof: Uint8Array // SCALE-encoded ring proof
-  aliases: Uint8Array // SCALE-encoded Vec<Alias>
-  member: Uint8Array // 32-byte prover public key
-  members: Uint8Array // SCALE-encoded members list (echo)
-  contexts: Uint8Array // SCALE-encoded contexts (echo)
   message: Uint8Array // Message bytes (echo)
 }
 ```
