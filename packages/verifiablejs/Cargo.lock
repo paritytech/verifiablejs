@@ -190,9 +190,9 @@ dependencies = [
 
 [[package]]
 name = "ark-vrf"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f69f34cb5a7d5d4627792c7a6343508becc19deab59a87ef73367cc112dfd02c"
+checksum = "9b9bd02dbd2f282fe742d51f681adb2745a79dc8a025bc8d16cac9b255d55bf7"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -910,7 +910,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 [[package]]
 name = "verifiable"
 version = "0.5.0"
-source = "git+https://github.com/paritytech/verifiable.git?rev=f65b39df04f2f9a453d78550438b189c96785285#f65b39df04f2f9a453d78550438b189c96785285"
+source = "git+https://github.com/paritytech/verifiable.git?rev=19b03deb89b8dea484b143afc8bbe048a74bc1ff#19b03deb89b8dea484b143afc8bbe048a74bc1ff"
 dependencies = [
  "ark-scale",
  "ark-serialize",
