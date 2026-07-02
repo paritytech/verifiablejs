@@ -174,6 +174,78 @@ pub fn one_shot(
 	Ok(obj)
 }
 
+// ---------------------------------------------------------------------------
+// PROTOTYPE: split prover flow (`prover_open` + `prove_with_commitment`)
+//
+// `one_shot` re-runs the expensive ring `open` on every call. The prover
+// `Commitment` (`ProverState`) is `FullCodec`, so we can `open` once, hand the
+// SCALE-encoded commitment back to JS, and reuse it for many `create` calls
+// against the same ring. The 32-byte `entropy` is still passed each time (the
+// `Secret` is not serializable and is cheap to re-derive), so no secret ever
+// crosses the boundary as a persisted handle.
+//
+// NOTE: the encoded commitment is large (~466 KB for a 10-member Domain11 ring,
+// it embeds the ring-derived prover key). Intended to be held in-memory for a
+// "prove many against one ring" session, not persisted.
+// ---------------------------------------------------------------------------
+
+/// Open the ring for a prover ONCE and return the SCALE-encoded prover
+/// `Commitment`. Feed the result to [`prove_with_commitment`].
+#[wasm_bindgen]
+pub fn prover_open(
+	ring_exponent: u32,
+	entropy: Uint8Array,
+	members: Uint8Array,
+) -> Result<Uint8Array, JsString> {
+	let capacity = parse_capacity(ring_exponent)?;
+
+	let entropy_vec = entropy.to_vec();
+	let entropy = Entropy::decode(&mut &entropy_vec[..])
+		.map_err(|_| JsString::from("Entropy decoding failed"))?;
+	let secret = Bvv::new_secret(entropy);
+	let member = Bvv::member_from_secret(&secret);
+
+	let members = decode_members(members)?;
+	let commitment = Bvv::open(capacity, &member, members.into_iter())
+		.map_err(|_| JsString::from("Verifiable::open failed"))?;
+
+	Ok(Uint8Array::from(&commitment.encode()[..]))
+}
+
+/// Create an anonymous ring proof from a pre-opened commitment (see
+/// [`prover_open`]). Equivalent to the `open`+`create` portion of `one_shot`,
+/// but skips re-opening the ring. Returns `{ proof, alias, member }`.
+#[wasm_bindgen]
+pub fn prove_with_commitment(
+	entropy: Uint8Array,
+	commitment: Uint8Array,
+	context: Uint8Array,
+	message: Uint8Array,
+) -> Result<Object, JsString> {
+	let entropy_vec = entropy.to_vec();
+	let entropy = Entropy::decode(&mut &entropy_vec[..])
+		.map_err(|_| JsString::from("Entropy decoding failed"))?;
+	let secret = Bvv::new_secret(entropy);
+	let member = Bvv::member_from_secret(&secret);
+	let member_encoded = member.encode();
+
+	let commitment_vec = commitment.to_vec();
+	let commitment = <Bvv as GenerateVerifiable>::Commitment::decode(&mut &commitment_vec[..])
+		.map_err(|_| JsString::from("Decoding Commitment failed"))?;
+
+	let context = &context.to_vec()[..];
+	let message = &message.to_vec()[..];
+	let (proof, alias) = Bvv::create(commitment, &secret, context, message)
+		.map_err(|_| JsString::from("Verifiable::create failed"))?;
+
+	let obj = Object::new();
+	js_sys::Reflect::set(&obj, &"member".into(), &Uint8Array::from(&member_encoded[..])).unwrap();
+	// Raw canonical proof bytes, same as `one_shot`.
+	js_sys::Reflect::set(&obj, &"proof".into(), &Uint8Array::from(&proof[..])).unwrap();
+	js_sys::Reflect::set(&obj, &"alias".into(), &Uint8Array::from(&alias[..])).unwrap();
+	Ok(obj)
+}
+
 /// Validate a ring proof against a pre-built 768-byte SCALE-encoded
 /// `MembersCommitment` — the ring root as stored by `pallet-members` on chain.
 ///
