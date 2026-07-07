@@ -36,6 +36,8 @@ const result = one_shot(11, entropy, encodedMembers, context, message)
 const alias = validate(11, result.proof, encodedMembers, context, message)
 ```
 
+> **Tip:** `validate` rebuilds the ring commitment on every call, which is the expensive part of verification. If you already have the finalized commitment — e.g. fetched from `pallet-members` on chain — use `validate_with_commitment` instead. See the full docs for details.
+
 ## API Overview
 
 | Function                 | Description                            |
@@ -43,7 +45,8 @@ const alias = validate(11, result.proof, encodedMembers, context, message)
 | `member_from_entropy`    | Derive a public key from entropy       |
 | `is_member_valid`        | Check if a public key is valid         |
 | `one_shot`               | Create an anonymous ring proof         |
-| `validate`               | Validate a proof, extract alias        |
+| `validate`               | Validate a proof from the member list  |
+| `validate_with_commitment` | Validate against a pre-built commitment (preferred) |
 | `is_valid`               | Check proof validity with known alias  |
 | `create_multi_context`   | Proof covering multiple contexts       |
 | `validate_multi_context` | Validate a multi-context proof         |
