@@ -910,7 +910,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 [[package]]
 name = "verifiable"
 version = "0.5.0"
-source = "git+https://github.com/paritytech/verifiable.git?rev=19b03deb89b8dea484b143afc8bbe048a74bc1ff#19b03deb89b8dea484b143afc8bbe048a74bc1ff"
+source = "git+https://github.com/paritytech/verifiable.git?rev=1f9f67524acce0d9c46dbbb566f84ce52757b114#1f9f67524acce0d9c46dbbb566f84ce52757b114"
 dependencies = [
  "ark-scale",
  "ark-serialize",

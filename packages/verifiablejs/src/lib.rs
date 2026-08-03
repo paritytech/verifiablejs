@@ -13,7 +13,7 @@ use verifiable::{
 		bandersnatch::BandersnatchVrfVerifiable,
 		ring_verifier_builder_params, RingDomainSize, StaticChunk,
 	},
-	Alias, BatchProofItem, Entropy, GenerateVerifiable,
+	Alias, BatchProofItem, BatchProofItemFor, Entropy, GenerateVerifiable,
 };
 use wasm_bindgen::prelude::*;
 
@@ -174,7 +174,7 @@ pub fn one_shot(
 	Ok(obj)
 }
 
-/// Validate a ring proof against a pre-built 768-byte SCALE-encoded
+/// Validate a ring proof against a pre-built 288-byte SCALE-encoded
 /// `MembersCommitment` — the ring root as stored by `pallet-members` on chain.
 ///
 /// Recommended entry point for chain-adjacent frontends: fetch the ring root
@@ -288,17 +288,19 @@ pub fn batch_validate(
 	)
 	.map_err(|_| JsString::from("Decoding BatchProofItems failed"))?;
 
-	let items: Vec<BatchProofItem<<Bvv as GenerateVerifiable>::Proof>> = tuples
+	let items: Vec<BatchProofItemFor<Bvv>> = tuples
 		.into_iter()
 		.map(|(proof, context, message)| BatchProofItem {
 			proof,
+			config: capacity,
+			members: members_commitment.clone(),
 			context,
 			message,
 		})
 		.collect();
 
-	let aliases = Bvv::batch_validate(capacity, &members_commitment, &items)
-		.map_err(|_| JsString::from("Batch validation failed"))?;
+	let aliases =
+		Bvv::batch_validate(&items).map_err(|_| JsString::from("Batch validation failed"))?;
 
 	Ok(Uint8Array::from(&aliases.encode()[..]))
 }
@@ -374,7 +376,7 @@ pub fn is_member_valid(member: Uint8Array) -> Boolean {
 }
 
 /// Compute the ring root (MembersCommitment) from a SCALE-encoded Vec of members.
-/// This returns the 768-byte commitment.
+/// This returns the 288-byte commitment.
 #[wasm_bindgen]
 pub fn members_root(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
 	let decoded_members = decode_members(members)?;
@@ -1024,7 +1026,7 @@ mod tests {
 
 		let root =
 			members_root(TEST_RING_EXPONENT, encoded.clone()).expect("members_root should succeed");
-		assert_eq!(root.to_vec().len(), 768);
+		assert_eq!(root.to_vec().len(), 288);
 
 		let inter = members_intermediate(TEST_RING_EXPONENT, encoded)
 			.expect("members_intermediate should succeed");

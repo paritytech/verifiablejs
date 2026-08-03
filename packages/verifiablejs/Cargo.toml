@@ -15,7 +15,7 @@ getrandom = { version = "0.2.11", features = ["js"] }
 js-sys = "0.3.66"
 parity-scale-codec = { version = "3.7.4", default-features = false, features = ["derive"] }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
-verifiable = { git = "https://github.com/paritytech/verifiable.git", rev = "19b03deb89b8dea484b143afc8bbe048a74bc1ff" }
+verifiable = { git = "https://github.com/paritytech/verifiable.git", rev = "1f9f67524acce0d9c46dbbb566f84ce52757b114" }
 wasm-bindgen = "0.2.90"
 
 [dev-dependencies]
