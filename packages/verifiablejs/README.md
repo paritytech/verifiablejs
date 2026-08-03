@@ -52,7 +52,7 @@ const alias = validate(11, result.proof, encodedMembers, context, message)
 | `alias_in_context`       | Compute alias without a proof          |
 | `sign`                   | Non-anonymous message signature        |
 | `verify_signature`       | Verify a signature                     |
-| `members_root`           | Compute ring commitment (768 bytes)    |
+| `members_root`           | Compute ring commitment (288 bytes)    |
 | `members_intermediate`   | Compute intermediate state (848 bytes) |
 
 All ring functions require a `domain_size` parameter: `11` (~255 members), `12` (~767), or `16` (~16,127).
