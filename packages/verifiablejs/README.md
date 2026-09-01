@@ -43,23 +43,25 @@ const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, mes
 // const alias = validate_with_commitment(RING_EXPONENT, result.proof, ringRoot, context, message)
 ```
 
+> **Tip:** `validate` rebuilds the ring commitment on every call, which is the expensive part of verification. If you already have the finalized commitment — e.g. fetched from `pallet-members` on chain — use `validate_with_commitment` instead. See the full docs for details.
+
 ## API Overview
 
-| Function                   | Description                               |
-| -------------------------- | ----------------------------------------- |
-| `member_from_entropy`      | Derive a public key from entropy          |
-| `is_member_valid`          | Check if a public key is valid            |
-| `encode_members`           | SCALE-encode `Member[]` → `Vec<Member>`   |
-| `one_shot`                 | Create an anonymous ring proof            |
-| `validate`                 | Validate a proof, extract alias           |
-| `validate_with_commitment` | Validate against a ring root (pre-flight) |
-| `is_valid`                 | Check proof validity with known alias     |
-| `batch_validate`           | Validate multiple proofs efficiently      |
-| `alias_in_context`         | Compute alias without a proof             |
-| `sign`                     | Non-anonymous message signature           |
-| `verify_signature`         | Verify a signature                        |
-| `members_root`             | Compute ring commitment (288 bytes)       |
-| `members_intermediate`     | Compute intermediate state (848 bytes)    |
+| Function                   | Description                                         |
+| -------------------------- | --------------------------------------------------- |
+| `member_from_entropy`      | Derive a public key from entropy                    |
+| `is_member_valid`          | Check if a public key is valid                      |
+| `encode_members`           | SCALE-encode `Member[]` → `Vec<Member>`             |
+| `one_shot`                 | Create an anonymous ring proof                      |
+| `validate`                 | Validate a proof from the member list               |
+| `validate_with_commitment` | Validate against a pre-built commitment (preferred) |
+| `is_valid`                 | Check proof validity with known alias               |
+| `batch_validate`           | Validate multiple proofs efficiently                |
+| `alias_in_context`         | Compute alias without a proof                       |
+| `sign`                     | Non-anonymous message signature                     |
+| `verify_signature`         | Verify a signature                                  |
+| `members_root`             | Compute ring commitment (288 bytes)                 |
+| `members_intermediate`     | Compute intermediate state (848 bytes)              |
 
 All ring functions require a `ring_exponent` parameter matching the on-chain `RingExponent`: `9` (R2e9, ~255 members), `10` (R2e10, ~767), or `14` (R2e14, ~16,127).
 
