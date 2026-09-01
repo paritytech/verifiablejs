@@ -1,5 +1,32 @@
 # verifiablejs
 
+## 1.6.0
+
+### Minor Changes
+
+- 03d2f0d: Bump the `verifiable` dependency to the published crates.io release `0.3.0` (previously pinned to git rev `1f9f6752`), switching from a git pin to a proper versioned dependency.
+
+  The release includes the changes since the old pin, most notably:
+
+  - The insecure deterministic no-std prover is replaced with a blinded no-std prover, and feature unification can no longer disable ring-proof blinding.
+  - New `batch_validate_per_item` with per-item failure attribution.
+  - `ark-vrf` bumped to `0.5.3` (with a matching `ark-scale` bump).
+
+  The JS API surface is unchanged.
+
+- 107ef92: Add `encode_members(members: Uint8Array[]): Uint8Array` — a built-in helper that SCALE-encodes an array of 32-byte member public keys into the `Vec<Member>` shape every ring function (`one_shot`, `validate`, `is_valid`, `batch_validate`, `members_root`, `members_intermediate`) expects for its `members` parameter. Callers no longer need to hand-roll the SCALE `Vec<[u8; 32]>` encoding or reach for a separate codec library. Each element must be exactly 32 bytes and a valid Bandersnatch public key, otherwise the call throws.
+
+  Documentation fixes:
+
+  - The package README's Quick Start used the old `domain_size` values (`11`/`12`/`16`) and called `one_shot(11, …)`; corrected to the `ring_exponent` values the API actually accepts (`9`/`10`/`14`).
+  - `validate_with_commitment` is now documented in both READMEs as the recommended local pre-flight check before an on-chain submission — it validates a proof against the 288-byte ring root (`MembersCommitment`) the chain exposes.
+  - Both READMEs now point to `encode_members` as the preferred way to build the `members` argument, keeping the hand-rolled encoding only as a no-WASM fallback.
+
+### Patch Changes
+
+- 9e84c4d: Docs: steer verification guidance toward `validate_with_commitment` — fetch the finalized 288-byte `MembersCommitment` from chain instead of rebuilding it from the member list on every `validate` call.
+- 0765f5c: Remove documentation for multi-context proof functions (`create_multi_context`, `validate_multi_context`, `is_valid_multi_context`, and the `MultiContextResult` type) from both READMEs. These were documented as part of the public API but were never implemented in the WASM bindings — only a similarly named test (`test_multi_context_aliases_are_unlinkable`, which exercises `alias_in_context`) exists. Documenting a non-existent API was misleading; the docs now reflect the functions the package actually ships.
+
 ## 1.5.0
 
 ### Minor Changes
