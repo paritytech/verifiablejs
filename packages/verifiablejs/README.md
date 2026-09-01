@@ -4,7 +4,7 @@ JavaScript/TypeScript WebAssembly bindings for the [Parity Verifiable](https://g
 
 Anonymous membership proofs using ring VRFs on the Bandersnatch elliptic curve. Prove you belong to a group without revealing which member you are.
 
-**Full documentation, API reference, and examples: [github.com/paritytech/verifiable-js](https://github.com/paritytech/verifiable-js#readme)**
+**Full documentation, API reference, and examples: [github.com/paritytech/verifiablejs](https://github.com/paritytech/verifiablejs#readme)**
 
 ## Installation
 
@@ -37,9 +37,9 @@ const result = one_shot(RING_EXPONENT, entropy, encodedMembers, context, message
 const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, message)
 
 // Recommended pre-flight before any on-chain submission: validate against the
-// 768-byte ring root (MembersCommitment) the chain exposes, rather than the
+// 288-byte ring root (MembersCommitment) the chain exposes, rather than the
 // full member list. Catches proof/ring/message mismatches locally.
-// const ringRoot = /* 768 bytes fetched via RPC */
+// const ringRoot = /* 288 bytes fetched via RPC */
 // const alias = validate_with_commitment(RING_EXPONENT, result.proof, ringRoot, context, message)
 ```
 
@@ -58,7 +58,7 @@ const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, mes
 | `alias_in_context`         | Compute alias without a proof             |
 | `sign`                     | Non-anonymous message signature           |
 | `verify_signature`         | Verify a signature                        |
-| `members_root`             | Compute ring commitment (768 bytes)       |
+| `members_root`             | Compute ring commitment (288 bytes)       |
 | `members_intermediate`     | Compute intermediate state (848 bytes)    |
 
 All ring functions require a `ring_exponent` parameter matching the on-chain `RingExponent`: `9` (R2e9, ~255 members), `10` (R2e10, ~767), or `14` (R2e14, ~16,127).

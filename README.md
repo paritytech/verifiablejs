@@ -73,7 +73,7 @@ const alias = validate(RING_EXPONENT, result.proof, encodedMembers, context, mes
 // alias matches result.alias - proves someone in the ring sent the message
 
 // 4b. Or verify from a pre-built ring commitment (e.g. fetched from `pallet-members`)
-// const commitment = /* 768 bytes from api.query.members.root(collectionId, ringIndex) */;
+// const commitment = /* 288 bytes from api.query.members.root(collectionId, ringIndex) */;
 // const alias = validate_with_commitment(RING_EXPONENT, result.proof, commitment, context, message);
 
 // 5. Non-anonymous signatures
@@ -150,11 +150,11 @@ This results in a total WASM binary size of approximately **7.3 MB**. All domain
 
 ### Ring Commitment
 
-A **ring commitment** (`MembersCommitment`, 768 bytes) is a compact cryptographic digest of a ring's member list. It is used during proof verification instead of the full member list. Building a commitment involves:
+A **ring commitment** (`MembersCommitment`, 288 bytes) is a compact cryptographic digest of a ring's member list. It is used during proof verification instead of the full member list. Building a commitment involves:
 
 1. `start_members(capacity)` - initialize builder for a given domain size
 2. `push_members(...)` - add members and SRS lookup data
-3. `finish_members(...)` - finalize into the 768-byte commitment
+3. `finish_members(...)` - finalize into the 288-byte commitment
 
 The `members_root()` JS function performs all three steps.
 
@@ -258,7 +258,7 @@ const alias = validate(9, result.proof, encodedMembers, context, message)
 
 #### `validate_with_commitment(ring_exponent, proof, commitment, context, message): Uint8Array`
 
-Validates a ring proof against a pre-built 768-byte `MembersCommitment` (ring root). Recommended for chain-adjacent frontends: fetch the root via RPC (`pallet-members::Root`) and pass it directly — saves the commitment-construction step `validate` performs internally from the member list.
+Validates a ring proof against a pre-built 288-byte `MembersCommitment` (ring root). Recommended for chain-adjacent frontends: fetch the root via RPC (`pallet-members::Root`) and pass it directly — saves the commitment-construction step `validate` performs internally from the member list.
 
 **Parameters:**
 
@@ -266,7 +266,7 @@ Validates a ring proof against a pre-built 768-byte `MembersCommitment` (ring ro
 | --------------- | --------------- | ------------------------------------------ |
 | `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (must match proof creation)  |
 | `proof`         | `Uint8Array`    | SCALE-encoded proof                        |
-| `commitment`    | `Uint8Array`    | 768-byte SCALE-encoded `MembersCommitment` |
+| `commitment`    | `Uint8Array`    | 288-byte SCALE-encoded `MembersCommitment` |
 | `context`       | `Uint8Array`    | Context identifier                         |
 | `message`       | `Uint8Array`    | Message                                    |
 
@@ -387,11 +387,11 @@ These functions precompute ring commitments for use in chain storage or other sc
 
 Computes the finalized ring commitment (`MembersCommitment`) from a SCALE-encoded member list. This is the compact representation used for on-chain storage and proof verification.
 
-**Returns:** `Uint8Array` - 768-byte commitment
+**Returns:** `Uint8Array` - 288-byte commitment
 
 ```typescript
 const commitment = members_root(9, encodedMembers)
-// 768 bytes
+// 288 bytes
 ```
 
 #### `members_intermediate(ring_exponent: number, members: Uint8Array): Uint8Array`

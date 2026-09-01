@@ -22,9 +22,9 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "ark-bls12-381"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3df4dcc01ff89867cd86b0da835f23c3f02738353aaee7dde7495af71363b8d5"
+checksum = "be2ede2c0c96fa37d5d3484e8a59fec566c4a52b8c84bf993eaa6c67d7225a4c"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -34,9 +34,9 @@ dependencies = [
 
 [[package]]
 name = "ark-ec"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d68f2d516162846c1238e755a7c4d131b892b70cc70c471a8e3ca3ed818fce"
+checksum = "8352a2b2aedf6ba2cc38f7520fc51191d518dde96175c729af19f2d059f191c4"
 dependencies = [
  "ahash",
  "ark-ff",
@@ -45,20 +45,19 @@ dependencies = [
  "ark-std",
  "educe",
  "fnv",
- "hashbrown",
+ "hashbrown 0.17.1",
  "itertools",
  "num-bigint",
  "num-integer",
  "num-traits",
- "rayon",
  "zeroize",
 ]
 
 [[package]]
 name = "ark-ed-on-bls12-381-bandersnatch"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1786b2e3832f6f0f7c8d62d5d5a282f6952a1ab99981c54cd52b6ac1d8f02df5"
+checksum = "997428e73129c7b7a7431b4f67855db94947421f008b97b4c256101cea1686cc"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -68,30 +67,26 @@ dependencies = [
 
 [[package]]
 name = "ark-ff"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a177aba0ed1e0fbb62aa9f6d0502e9b46dad8c2eab04c14258a1212d2557ea70"
+checksum = "f7a806ac6c8307b929df4645776290a50ee2aac754ad09d8bdf73391309e43af"
 dependencies = [
  "ark-ff-asm",
  "ark-ff-macros",
  "ark-serialize",
  "ark-std",
- "arrayvec",
  "digest",
  "educe",
- "itertools",
  "num-bigint",
  "num-traits",
- "paste",
- "rayon",
  "zeroize",
 ]
 
 [[package]]
 name = "ark-ff-asm"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62945a2f7e6de02a31fe400aa489f0e0f5b2502e69f95f853adb82a96c7a6b60"
+checksum = "1479009684adc073dff49a1025d3a7065b317a9ead25aaaca38cdc70058ba8a2"
 dependencies = [
  "quote",
  "syn",
@@ -99,9 +94,9 @@ dependencies = [
 
 [[package]]
 name = "ark-ff-macros"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09be120733ee33f7693ceaa202ca41accd5653b779563608f1234f78ae07c4b3"
+checksum = "4a0691ed21ef00ef89c1e9bda832eba493dda3ec2f8d892fb25b705f73f06bb8"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -112,9 +107,9 @@ dependencies = [
 
 [[package]]
 name = "ark-poly"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "579305839da207f02b89cd1679e50e67b4331e2f9294a57693e5051b7703fe27"
+checksum = "75f55af10b672002b8d953e230282c51206842e20e5791a94432219b4201de5c"
 dependencies = [
  "ahash",
  "ark-ff",
@@ -122,15 +117,14 @@ dependencies = [
  "ark-std",
  "educe",
  "fnv",
- "hashbrown",
- "rayon",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
 name = "ark-scale"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "985c81a9c7b23a72f62b7b20686d5326d2a9956806f37de9ee35cb1238faf0c0"
+checksum = "7080e0b73651b75236e0b9af7c6a68cd38e87d02553e39c0cbf525b704c780a9"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -140,23 +134,21 @@ dependencies = [
 
 [[package]]
 name = "ark-serialize"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f4d068aaf107ebcd7dfb52bc748f8030e0fc930ac8e360146ca54c1203088f7"
+checksum = "a74dd304fd536fb95d0a328e72be759209cc496a9da094c5bc56e5fea4f9e86b"
 dependencies = [
  "ark-serialize-derive",
  "ark-std",
- "arrayvec",
  "digest",
  "num-bigint",
- "rayon",
 ]
 
 [[package]]
 name = "ark-serialize-derive"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "213888f660fddcca0d257e88e54ac05bca01885f258ccdf695bafd77031bb69d"
+checksum = "4f153690697a2b91e5e1251ff98411ee5371500a111a0fd317a70e588eb300f9"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -165,34 +157,32 @@ dependencies = [
 
 [[package]]
 name = "ark-std"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "246a225cc6131e9ee4f24619af0f19d67761fff15d7ccc22e42b80846e69449a"
+checksum = "367c9c827ed431bff6868b7aa926e05b16eb46603cc8b6e768e4a5553fa1d155"
 dependencies = [
  "num-traits",
  "rand",
- "rayon",
 ]
 
 [[package]]
 name = "ark-transcript"
-version = "0.0.3"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c1c928edb9d8ff24cb5dcb7651d3a98494fff3099eee95c2404cd813a9139f"
+checksum = "5a9a23188a6bb8d8d2394a2a904e6944999e2cfceb446b086ff3a581ee05cebd"
 dependencies = [
  "ark-ff",
  "ark-serialize",
  "ark-std",
  "digest",
- "rand_core",
  "sha3",
 ]
 
 [[package]]
 name = "ark-vrf"
-version = "0.5.0"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f69f34cb5a7d5d4627792c7a6343508becc19deab59a87ef73367cc112dfd02c"
+checksum = "6e1eab4d92e7a80fea37a6a5424de677f8c46809b88ed4c5e94dd4eed5cc39e8"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -202,7 +192,6 @@ dependencies = [
  "ark-std",
  "digest",
  "generic-array",
- "rayon",
  "sha2",
  "w3f-ring-proof",
  "zeroize",
@@ -247,11 +236,9 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dee8eddd066a8825ec5570528e6880471210fd5d88cb6abbe1cfdd51ca249c33"
 dependencies = [
- "jam-codec",
  "log",
  "parity-scale-codec",
  "scale-info",
- "serde",
 ]
 
 [[package]]
@@ -315,31 +302,6 @@ checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "crossbeam-deque"
-version = "0.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd111b7b7f7d55b72c0a6ae361660ee5853c9af73f70c3c2ef6858b950e2e51"
-dependencies = [
- "crossbeam-epoch",
- "crossbeam-utils",
-]
-
-[[package]]
-name = "crossbeam-epoch"
-version = "0.9.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
-name = "crossbeam-utils"
-version = "0.8.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crypto-common"
@@ -466,7 +428,6 @@ version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ea1015b5a70616b688dc230cfe50c8af89d972cb132d5a622814d29773b10b9"
 dependencies = [
- "rand",
  "rand_core",
 ]
 
@@ -475,6 +436,12 @@ name = "hashbrown"
 version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
+
+[[package]]
+name = "hashbrown"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 dependencies = [
  "allocator-api2",
 ]
@@ -497,44 +464,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
- "hashbrown",
+ "hashbrown 0.15.4",
 ]
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
-]
-
-[[package]]
-name = "jam-codec"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb948eace373d99de60501a02fb17125d30ac632570de20dccc74370cdd611b9"
-dependencies = [
- "arrayvec",
- "bitvec",
- "byte-slice-cast",
- "const_format",
- "impl-trait-for-tuples",
- "jam-codec-derive",
- "rustversion",
- "serde",
-]
-
-[[package]]
-name = "jam-codec-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "319af585c4c8a6b5552a52b7787a1ab3e4d59df7614190b1f85b9b842488789d"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -659,12 +598,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "paste"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -712,7 +645,6 @@ version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a"
 dependencies = [
- "libc",
  "rand_chacha",
  "rand_core",
 ]
@@ -734,26 +666,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
-]
-
-[[package]]
-name = "rayon"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
-dependencies = [
- "either",
- "rayon-core",
-]
-
-[[package]]
-name = "rayon-core"
-version = "1.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
-dependencies = [
- "crossbeam-deque",
- "crossbeam-utils",
 ]
 
 [[package]]
@@ -856,6 +768,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
+name = "subtle"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
 name = "syn"
 version = "2.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -909,16 +827,18 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "verifiable"
-version = "0.5.0"
-source = "git+https://github.com/paritytech/verifiable.git?rev=f65b39df04f2f9a453d78550438b189c96785285#f65b39df04f2f9a453d78550438b189c96785285"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61bcf1e43762a8701eb3c2e836633c9ff3b65814ff573772b3250c1ed6ff218d"
 dependencies = [
  "ark-scale",
  "ark-serialize",
  "ark-vrf",
  "bounded-collections",
+ "getrandom",
+ "getrandom_or_panic",
  "parity-scale-codec",
  "scale-info",
- "sha2",
  "smallvec",
  "spin",
 ]
@@ -944,9 +864,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "w3f-pcs"
-version = "0.0.5"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ea1046a1deb6d26c34ba2d1f1bab4222d695d126502ee765f80b021753cb674"
+checksum = "1304615e0b129091634dcebd1acf9edee4d6aabd03e7d679a0c49a1a1a45fe98"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -954,14 +874,13 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "merlin",
- "rayon",
 ]
 
 [[package]]
 name = "w3f-plonk-common"
-version = "0.0.7"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30408cda37b81bd7257319942584c794c5784d00d749757bc664656749a1472a"
+checksum = "e24647403dfe8eeb4ef57358e41c29c1ae253c4a123ef9e04d3029fabca38bc2"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -970,15 +889,15 @@ dependencies = [
  "ark-std",
  "getrandom_or_panic",
  "rand_core",
- "rayon",
+ "subtle",
  "w3f-pcs",
 ]
 
 [[package]]
 name = "w3f-ring-proof"
-version = "0.0.8"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cbfc4cb881a934e6f33c25927bf955d0cb18e52b94528bbc5fa28dddedb4cd1"
+checksum = "b86bf57d9f25c1020c372f1a64069fef9f158db85cd6ef087cee560337bed56d"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -986,7 +905,6 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "ark-transcript",
- "rayon",
  "w3f-pcs",
  "w3f-plonk-common",
 ]

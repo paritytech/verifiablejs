@@ -13,7 +13,7 @@ use verifiable::{
 		bandersnatch::BandersnatchVrfVerifiable,
 		ring_verifier_builder_params, RingDomainSize, StaticChunk,
 	},
-	Alias, BatchProofItem, Entropy, GenerateVerifiable,
+	Alias, BatchProofItem, BatchProofItemFor, Entropy, GenerateVerifiable,
 };
 use wasm_bindgen::prelude::*;
 
@@ -203,7 +203,7 @@ pub fn one_shot(
 	Ok(obj)
 }
 
-/// Validate a ring proof against a pre-built 768-byte SCALE-encoded
+/// Validate a ring proof against a pre-built 288-byte SCALE-encoded
 /// `MembersCommitment` — the ring root as stored by `pallet-members` on chain.
 ///
 /// Recommended entry point for chain-adjacent frontends: fetch the ring root
@@ -317,17 +317,19 @@ pub fn batch_validate(
 	)
 	.map_err(|_| JsString::from("Decoding BatchProofItems failed"))?;
 
-	let items: Vec<BatchProofItem<<Bvv as GenerateVerifiable>::Proof>> = tuples
+	let items: Vec<BatchProofItemFor<Bvv>> = tuples
 		.into_iter()
 		.map(|(proof, context, message)| BatchProofItem {
 			proof,
+			config: capacity,
+			members: members_commitment.clone(),
 			context,
 			message,
 		})
 		.collect();
 
-	let aliases = Bvv::batch_validate(capacity, &members_commitment, &items)
-		.map_err(|_| JsString::from("Batch validation failed"))?;
+	let aliases =
+		Bvv::batch_validate(&items).map_err(|_| JsString::from("Batch validation failed"))?;
 
 	Ok(Uint8Array::from(&aliases.encode()[..]))
 }
@@ -403,7 +405,7 @@ pub fn is_member_valid(member: Uint8Array) -> Boolean {
 }
 
 /// Compute the ring root (MembersCommitment) from a SCALE-encoded Vec of members.
-/// This returns the 768-byte commitment.
+/// This returns the 288-byte commitment.
 #[wasm_bindgen]
 pub fn members_root(ring_exponent: u32, members: Uint8Array) -> Result<Uint8Array, JsString> {
 	let decoded_members = decode_members(members)?;
@@ -759,6 +761,31 @@ mod tests {
 	}
 
 	#[wasm_bindgen_test]
+	fn test_identity_point_member_rejected() {
+		// Compressed encoding of the Bandersnatch neutral element: 0x01 followed
+		// by zeros. It passes the subgroup check but has no affine coordinates,
+		// so before verifiable rev 19b03de it slipped through `is_member_valid`
+		// and made `push_members` panic inside the ring backend. Both paths must
+		// now reject it.
+		let mut identity = [0u8; 32];
+		identity[0] = 0x01;
+
+		assert!(is_member_valid(Uint8Array::from(&identity[..])).is_falsy());
+
+		// Building a commitment over a set containing it must error, not trap.
+		let identity_member =
+			<Bvv as GenerateVerifiable>::Member::decode(&mut &identity[..]).unwrap();
+		let mut members = make_test_members(3);
+		members.push(identity_member);
+
+		let result = members_root(
+			TEST_RING_EXPONENT,
+			Uint8Array::from(&members.encode().to_vec()[..]),
+		);
+		assert!(result.is_err());
+	}
+
+	#[wasm_bindgen_test]
 	fn test_is_valid() {
 		let entropy = [5u8; 32];
 		let context = b"Context";
@@ -1028,7 +1055,7 @@ mod tests {
 
 		let root =
 			members_root(TEST_RING_EXPONENT, encoded.clone()).expect("members_root should succeed");
-		assert_eq!(root.to_vec().len(), 768);
+		assert_eq!(root.to_vec().len(), 288);
 
 		let inter = members_intermediate(TEST_RING_EXPONENT, encoded)
 			.expect("members_intermediate should succeed");
@@ -1261,7 +1288,7 @@ mod tests {
 
 		// And it must be directly consumable by the ring functions.
 		let root = members_root(TEST_RING_EXPONENT, encoded).expect("members_root should accept it");
-		assert_eq!(root.to_vec().len(), 768);
+		assert_eq!(root.to_vec().len(), 288);
 	}
 
 	#[wasm_bindgen_test]

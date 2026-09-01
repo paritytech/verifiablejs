@@ -1,5 +1,35 @@
 # verifiablejs
 
+## 1.5.0
+
+### Minor Changes
+
+- 96dd2f4: Bump the pinned `verifiable` crate to `19b03deb` (from `f65b39df`) to match the rev used by the Individuality/People-chain runtime and the `verifiable-dart` client.
+
+  This pulls in the newer ring-VRF code (ark-vrf 0.5.0 → 0.5.1), identity-point rejection in member validation/construction, and the prover side-channel / deanonymization mitigations. Keeping the client on the same rev as the chain ensures generated members, aliases, proofs and signatures are byte-compatible with what the chain accepts.
+
+- 494953d: Bump the pinned `verifiable` crate to `1f9f6752` (from `19b03deb`) to match the rev used by the Individuality/People-chain runtime.
+
+  This pulls in the multi-ring/multi-domain batch verification support and the `MembersCommitment` slimming (it now stores only the ring commitment, not the full verifier key). Keeping the client on the same rev as the chain ensures generated members, aliases, proofs and signatures stay byte-compatible with what the chain accepts.
+
+  **Note for consumers:** the SCALE-encoded `MembersCommitment` shrank from 768 to 288 bytes. `members_root()` now returns the 288-byte form, and `validate_with_commitment()` expects it — old 768-byte commitments (e.g. cached ones or roots fetched from a pre-upgrade chain) will no longer decode. The JS API surface is otherwise unchanged; `batch_validate` keeps its one-ring-per-batch signature.
+
+## 1.4.0
+
+### Minor Changes
+
+- 946e00d: Bump `verifiable` crate to rev `19b03de` (mainline, post-0.5.0 hardening). No JS API surface change; proofs, signatures, and commitments remain wire-compatible with the previous rev (`f65b39d`).
+
+  ### Behavioral changes
+
+  - **Curve-point validation on decode is re-enabled.** The previous rev matched the `no-point-validation` state; now `Member`, `MembersCommitment` (ring root), `MembersSet`, and `StaticChunk` bytes are validated (on-curve + correct subgroup) when decoded. Malformed input to `validate_with_commitment` etc. now fails at decode with the existing error messages instead of risking panics deeper in the crypto.
+  - **The identity (neutral) point is rejected as a member.** Previously it passed `is_member_valid` but made commitment construction panic (wasm trap) inside the ring backend. Now `is_member_valid` returns `false` for it and `members_root` / `members_intermediate` / `validate` / `one_shot` return a proper error when the member set contains it.
+  - **Canonical KZG verifier-key pinning.** `validate`, `validate_with_commitment`, `is_valid`, and `batch_validate` now reject a ring root whose embedded trusted-setup key is not the canonical one for the Bandersnatch suite, closing a membership-forgery vector for attacker-supplied commitments.
+  - **Faster repeated verification.** The Bandersnatch suite now ships static verifier/prover caches, so ring-context parameters are no longer recomputed on every `validate`/`one_shot` call within a session.
+  - **Side-channel hardened prover.** The crate's `std` feature now bundles `secret-split` (secret scalar split into random summands before point multiplication), which applies to the wasm prover paths (`one_shot`, `sign`).
+
+  Also bumps the transitive `ark-vrf` dependency from 0.5.0 to 0.5.1.
+
 ## 1.3.0
 
 ### Minor Changes
