@@ -36,24 +36,27 @@ const result = one_shot(11, entropy, encodedMembers, context, message)
 const alias = validate(11, result.proof, encodedMembers, context, message)
 ```
 
+> **Tip:** `validate` rebuilds the ring commitment on every call, which is the expensive part of verification. If you already have the finalized commitment — e.g. fetched from `pallet-members` on chain — use `validate_with_commitment` instead. See the full docs for details.
+
 ## API Overview
 
-| Function                 | Description                            |
-| ------------------------ | -------------------------------------- |
-| `member_from_entropy`    | Derive a public key from entropy       |
-| `is_member_valid`        | Check if a public key is valid         |
-| `one_shot`               | Create an anonymous ring proof         |
-| `validate`               | Validate a proof, extract alias        |
-| `is_valid`               | Check proof validity with known alias  |
-| `create_multi_context`   | Proof covering multiple contexts       |
-| `validate_multi_context` | Validate a multi-context proof         |
-| `is_valid_multi_context` | Check multi-context proof validity     |
-| `batch_validate`         | Validate multiple proofs efficiently   |
-| `alias_in_context`       | Compute alias without a proof          |
-| `sign`                   | Non-anonymous message signature        |
-| `verify_signature`       | Verify a signature                     |
-| `members_root`           | Compute ring commitment (288 bytes)    |
-| `members_intermediate`   | Compute intermediate state (848 bytes) |
+| Function                   | Description                                         |
+| -------------------------- | --------------------------------------------------- |
+| `member_from_entropy`      | Derive a public key from entropy                    |
+| `is_member_valid`          | Check if a public key is valid                      |
+| `one_shot`                 | Create an anonymous ring proof                      |
+| `validate`                 | Validate a proof from the member list               |
+| `validate_with_commitment` | Validate against a pre-built commitment (preferred) |
+| `is_valid`                 | Check proof validity with known alias               |
+| `create_multi_context`     | Proof covering multiple contexts                    |
+| `validate_multi_context`   | Validate a multi-context proof                      |
+| `is_valid_multi_context`   | Check multi-context proof validity                  |
+| `batch_validate`           | Validate multiple proofs efficiently                |
+| `alias_in_context`         | Compute alias without a proof                       |
+| `sign`                     | Non-anonymous message signature                     |
+| `verify_signature`         | Verify a signature                                  |
+| `members_root`             | Compute ring commitment (288 bytes)                 |
+| `members_intermediate`     | Compute intermediate state (848 bytes)              |
 
 All ring functions require a `domain_size` parameter: `11` (~255 members), `12` (~767), or `16` (~16,127).
 
