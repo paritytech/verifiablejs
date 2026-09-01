@@ -69,7 +69,7 @@ const result = one_shot(RING_EXPONENT, proverEntropy, encodedMembers, context, m
 // result.member - your public key
 
 // 4a. Verify from a pre-built ring commitment — RECOMMENDED for chain-adjacent apps.
-// Fetch the finalized 768-byte commitment (the ring "root") from the chain and pass
+// Fetch the finalized 288-byte commitment (the ring "root") from the chain and pass
 // it directly. This skips the commitment-construction step, which is the expensive
 // part of verification (see `validate` vs `validate_with_commitment` below).
 const ringRoot = await api.query.members.root(collectionId, ringIndex) // pallet-members
@@ -159,11 +159,11 @@ This results in a total WASM binary size of approximately **7.3 MB**. All domain
 
 ### Ring Commitment
 
-A **ring commitment** (`MembersCommitment`, 768 bytes) is a compact cryptographic digest of a ring's member list. It is used during proof verification instead of the full member list. Building a commitment involves:
+A **ring commitment** (`MembersCommitment`, 288 bytes) is a compact cryptographic digest of a ring's member list. It is used during proof verification instead of the full member list. Building a commitment involves:
 
 1. `start_members(capacity)` - initialize builder for a given domain size
 2. `push_members(...)` - add members and SRS lookup data
-3. `finish_members(...)` - finalize into the 768-byte commitment
+3. `finish_members(...)` - finalize into the 288-byte commitment
 
 The `members_root()` JS function performs all three steps. This computation is **not cheap** — its cost grows with ring size — so build a commitment once and reuse it rather than recomputing per verification. On chains running `pallet-members` the finalized commitment is already stored on-chain and can be fetched directly (see [`validate_with_commitment`](#validate_with_commitmentring_exponent-proof-commitment-context-message-uint8array)).
 
@@ -256,7 +256,7 @@ const alias = validate(9, result.proof, encodedMembers, context, message)
 
 #### `validate_with_commitment(ring_exponent, proof, commitment, context, message): Uint8Array`
 
-Validates a ring proof against a pre-built 768-byte `MembersCommitment` (the ring "root"). **This is the recommended verification path** whenever you already have the commitment or can fetch it: it skips the commitment-construction step `validate` performs internally, which is the expensive part of verification.
+Validates a ring proof against a pre-built 288-byte `MembersCommitment` (the ring "root"). **This is the recommended verification path** whenever you already have the commitment or can fetch it: it skips the commitment-construction step `validate` performs internally, which is the expensive part of verification.
 
 **Parameters:**
 
@@ -264,7 +264,7 @@ Validates a ring proof against a pre-built 768-byte `MembersCommitment` (the rin
 | --------------- | --------------- | ------------------------------------------ |
 | `ring_exponent` | `9 \| 10 \| 14` | Ring exponent (must match proof creation)  |
 | `proof`         | `Uint8Array`    | SCALE-encoded proof                        |
-| `commitment`    | `Uint8Array`    | 768-byte SCALE-encoded `MembersCommitment` |
+| `commitment`    | `Uint8Array`    | 288-byte SCALE-encoded `MembersCommitment` |
 | `context`       | `Uint8Array`    | Context identifier                         |
 | `message`       | `Uint8Array`    | Message                                    |
 
@@ -281,13 +281,13 @@ const alias = validate_with_commitment(9, result.proof, commitment, context, mes
 
 On chains running `pallet-members` (e.g. the Individuality people chain), the finalized commitment is stored on-chain — no runtime API needed, just a state query. There is no need to rebuild it locally from the member list.
 
-- **People / source chain** — `Members.Root(collectionId, ringIndex)` (a double map) returns a `RingRoot { root, revision, intermediate }` struct. Read the **`root`** field — it is the finalized 768-byte `MembersCommitment` (the runtime already ran `finish_members`). Do **not** use `intermediate`; that is the unfinished accumulator kept for adding more members and is not valid for verification.
+- **People / source chain** — `Members.Root(collectionId, ringIndex)` (a double map) returns a `RingRoot { root, revision, intermediate }` struct. Read the **`root`** field — it is the finalized 288-byte `MembersCommitment` (the runtime already ran `finish_members`). Do **not** use `intermediate`; that is the unfinished accumulator kept for adding more members and is not valid for verification.
 - **Consumer / asset-hub chain** — `MembersSubscriber.RingRoots(collectionId, ringIndex)` returns a bounded list of recent `RingCommitmentRecord`s (mirrored over XCM). Take the most recent entry's `root` field.
 
 ```typescript
 // @polkadot/api against a pallet-members chain
 const ringRoot = await api.query.members.root(collectionId, ringIndex)
-const commitment = ringRoot.unwrap().root.toU8a() // finalized 768-byte MembersCommitment
+const commitment = ringRoot.unwrap().root.toU8a() // finalized 288-byte MembersCommitment
 const alias = validate_with_commitment(9, proof, commitment, context, message)
 ```
 
@@ -464,11 +464,11 @@ Computes the finalized ring commitment (`MembersCommitment`) from a SCALE-encode
 
 > This computation is non-trivial and scales with ring size. Prefer fetching the commitment from chain (see [`validate_with_commitment`](#validate_with_commitmentring_exponent-proof-commitment-context-message-uint8array)) when one is already stored there; use `members_root` when you need to build it yourself (e.g. off-chain or for genesis).
 
-**Returns:** `Uint8Array` - 768-byte commitment
+**Returns:** `Uint8Array` - 288-byte commitment
 
 ```typescript
 const commitment = members_root(9, encodedMembers)
-// 768 bytes
+// 288 bytes
 ```
 
 #### `members_intermediate(ring_exponent: number, members: Uint8Array): Uint8Array`
